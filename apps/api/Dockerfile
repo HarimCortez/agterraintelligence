@@ -18,7 +18,14 @@ WORKDIR /repo
 # all real and git-tracked. One COPY . . sidesteps that entirely.
 COPY . .
 
-RUN pnpm install --frozen-lockfile
+# Not --frozen-lockfile: Railway's build-context snapshot has been
+# consistently omitting pnpm-lock.yaml even though it's git-tracked and
+# present at the repo root (reproduced identically via both `railway up`
+# and a from-source GitHub redeploy — a platform-level snapshot quirk, not
+# something in this repo). Plain install regenerates the lockfile from
+# package.json's dependency ranges instead of hard-failing when it can't
+# find one.
+RUN pnpm install
 
 RUN pnpm --filter @agterra/api build
 
