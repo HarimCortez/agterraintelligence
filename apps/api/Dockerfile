@@ -3,7 +3,11 @@
 # was repeatedly falling back to plain `npm install` and choking on the
 # `workspace:*` protocol dependency on @agterra/db.
 FROM node:20-slim AS base
-RUN corepack enable
+# Explicit pin, not relying on corepack auto-reading `packageManager` from
+# package.json — that was silently resolving to pnpm 12.3.4 instead of the
+# pinned 9.15.0, a major-version jump whose different lockfile format then
+# made pnpm unable to recognize our existing pnpm-lock.yaml at all.
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /repo
 
 # Single copy of the whole monorepo — sacrifices some Docker layer-cache
