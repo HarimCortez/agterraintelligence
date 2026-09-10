@@ -4,7 +4,15 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      // Turborepo's strict env mode only auto-passes through framework-inferred
+      // patterns (e.g. NEXT_PUBLIC_*) — a plain var like API_URL is silently
+      // stripped from the build process unless declared here, which was
+      // causing next.config.mjs's rewrites() to see an undefined API_URL and
+      // fall back to its localhost default at build time (baked into the
+      // deployed routes-manifest.json, then rejected by Vercel at runtime as
+      // a private-address rewrite target).
+      "env": ["API_URL"]
     },
     "dev": {
       "cache": false,
