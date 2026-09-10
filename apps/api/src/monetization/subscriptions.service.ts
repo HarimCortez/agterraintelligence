@@ -80,6 +80,10 @@ export class SubscriptionsService {
       customer_email: userEmail,
       metadata: { userId: ctx.scopeId, plan: dto.plan },
       subscription_data: { metadata: { userId: ctx.scopeId, plan: dto.plan } },
+      // See report-orders.service.ts for why this is disabled — applied here
+      // too for consistency, even though subscription-mode sessions weren't
+      // observed hitting the same Managed Payments tax_code requirement.
+      managed_payments: { enabled: false },
     });
 
     if (!session.url) {

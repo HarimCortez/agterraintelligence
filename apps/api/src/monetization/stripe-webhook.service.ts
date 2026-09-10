@@ -19,10 +19,14 @@ const PLAN_TO_EXTERNAL_ROLE: Record<string, ExternalRole> = {
  *
  * Handles `checkout.session.completed` for both Checkout modes we create
  * (`subscription` — plan purchase; `payment` — report purchase),
- * `customer.subscription.updated`/`.deleted` for keeping `Subscription`
- * status in sync, and acknowledges (200, no-op) every other event type
- * without erroring, since Stripe sends many event types this app doesn't
- * act on.
+ * `checkout.session.async_payment_succeeded`/`.async_payment_failed` for
+ * delayed-notification payment methods (e.g. bank debits — Checkout Sessions
+ * here intentionally omit `payment_method_types` to allow Stripe's dynamic
+ * payment methods, so `completed` can fire before payment actually clears),
+ * `customer.subscription.updated`/`.deleted` and `invoice.paid`/
+ * `.payment_failed` for keeping `Subscription` status in sync, and
+ * acknowledges (200, no-op) every other event type without erroring, since
+ * Stripe sends many event types this app doesn't act on.
  */
 @Injectable()
 export class StripeWebhookService {
@@ -60,12 +64,45 @@ export class StripeWebhookService {
     }
 
     switch (event.type) {
-      case "checkout.session.completed":
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        // Dynamic payment methods are enabled (Checkout Sessions omit
+        // `payment_method_types` by design — do not change that), so this
+        // event can fire for a delayed-notification payment method (e.g. a
+        // bank debit) while `session.payment_status` is still `"unpaid"`.
+        // The real outcome arrives later via a separate
+        // `async_payment_succeeded`/`async_payment_failed` event — defer
+        // fulfillment rather than fulfilling (or not) based on this event
+        // alone. `"paid"` and `"no_payment_required"` (e.g. a subscription
+        // trial with no immediate charge) both mean the payment is settled
+        // now, so those proceed exactly as before.
+        if (session.payment_status === "unpaid") {
+          this.logger.log(
+            `checkout.session.completed (session ${session.id}, mode ${session.mode}) has payment_status 'unpaid' — deferring fulfillment pending async_payment_succeeded/async_payment_failed.`,
+          );
+          break;
+        }
+        await this.handleCheckoutSessionCompleted(session, stripe);
+        break;
+      }
+      case "checkout.session.async_payment_succeeded":
+        // This event only fires on confirmed success — no payment_status
+        // check needed, route straight to the same mode-specific
+        // fulfillment logic as `completed`.
         await this.handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, stripe);
+        break;
+      case "checkout.session.async_payment_failed":
+        await this.handleCheckoutSessionAsyncPaymentFailed(event.data.object as Stripe.Checkout.Session);
         break;
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
         await this.handleSubscriptionStatusSync(event.data.object as Stripe.Subscription);
+        break;
+      case "invoice.paid":
+        await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
+        break;
+      case "invoice.payment_failed":
+        await this.handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
         break;
       default:
         // Acknowledge, no-op — not every event type Stripe sends is
@@ -159,17 +196,31 @@ export class StripeWebhookService {
     const paymentIntentId =
       typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
 
-    // pending_payment -> queued -> generating, per the fulfillment state
-    // machine (schema.prisma's monetization header comment). Not user-
-    // scoped here: `reportOrderId` came from metadata *we* set when
-    // creating this exact Checkout Session, not from client-supplied
-    // input, and `event` has already passed Stripe signature verification
-    // above.
-    const order = await this.prisma.reportOrder.update({
-      where: { id: reportOrderId },
+    // Idempotency guard: Stripe can redeliver `checkout.session.completed`/
+    // `async_payment_succeeded` for the same event (or, in principle, both
+    // could reach us for the same order in a delayed-payment-method flow).
+    // Scoped conditional update — only transition pending_payment -> queued;
+    // if the order has already moved past pending_payment (a prior delivery
+    // of this same event already started/finished fulfillment), skip
+    // re-running the report-generation/AI-call side effect rather than
+    // blindly re-fulfilling. Not user-scoped beyond that: `reportOrderId`
+    // came from metadata *we* set when creating this exact Checkout Session,
+    // not from client-supplied input, and `event` has already passed Stripe
+    // signature verification above.
+    const { count } = await this.prisma.reportOrder.updateMany({
+      where: { id: reportOrderId, status: "pending_payment" },
       data: { status: "queued", stripePaymentIntentId: paymentIntentId },
     });
-    await this.prisma.reportOrder.update({ where: { id: order.id }, data: { status: "generating" } });
+    if (count === 0) {
+      this.logger.log(
+        `Report order ${reportOrderId} (session ${session.id}) is already past pending_payment — skipping duplicate fulfillment (webhook redelivery).`,
+      );
+      return;
+    }
+
+    // pending_payment -> queued -> generating, per the fulfillment state
+    // machine (schema.prisma's monetization header comment).
+    const order = await this.prisma.reportOrder.update({ where: { id: reportOrderId }, data: { status: "generating" } });
 
     try {
       const content = await this.reportGeneration.generateReportContent(
@@ -193,6 +244,97 @@ export class StripeWebhookService {
         `Report generation failed for order ${order.id} (property ${order.propertyId}, tier ${order.reportTierCode}) after successful payment — marking failed, NOT issuing a refund: ${error instanceof Error ? error.message : String(error)}`,
       );
       await this.prisma.reportOrder.update({ where: { id: order.id }, data: { status: "failed" } });
+    }
+  }
+
+  private async handleCheckoutSessionAsyncPaymentFailed(session: Stripe.Checkout.Session): Promise<void> {
+    if (session.mode === "payment") {
+      const reportOrderId = session.metadata?.reportOrderId;
+      if (!reportOrderId) {
+        this.logger.error(
+          `checkout.session.async_payment_failed (payment) missing reportOrderId metadata (session ${session.id})`,
+        );
+        return;
+      }
+
+      // Scoped conditional update: only fail an order still awaiting
+      // payment confirmation — never overwrite an order that already
+      // progressed (e.g. delivered/failed via a separate, already-processed
+      // delivery of this same purchase).
+      const { count } = await this.prisma.reportOrder.updateMany({
+        where: { id: reportOrderId, status: "pending_payment" },
+        data: { status: "failed" },
+      });
+      if (count === 0) {
+        this.logger.warn(
+          `checkout.session.async_payment_failed for report order ${reportOrderId} (session ${session.id}) — order was not in pending_payment (already progressed or not found), leaving unchanged.`,
+        );
+      } else {
+        this.logger.warn(
+          `checkout.session.async_payment_failed — marked report order ${reportOrderId} (session ${session.id}) as failed (delayed-notification payment method did not clear).`,
+        );
+      }
+      return;
+    }
+
+    if (session.mode === "subscription") {
+      // No local Subscription row exists yet at this point in the flow —
+      // it's only created in `handleSubscriptionCheckoutCompleted`, which
+      // never ran for this session since payment never actually cleared.
+      // Nothing to update; logged clearly for manual/support follow-up.
+      const email = session.customer_details?.email ?? session.customer_email ?? "unknown";
+      this.logger.warn(
+        `checkout.session.async_payment_failed for a subscription checkout (session ${session.id}, customer email ${email}) — delayed-notification payment method did not clear; no local Subscription row exists to update.`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `checkout.session.async_payment_failed for unexpected session mode '${session.mode}' (session ${session.id})`,
+    );
+  }
+
+  private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
+    const subscriptionId = getInvoiceSubscriptionId(invoice);
+    if (!subscriptionId) {
+      this.logger.debug(`invoice.paid for invoice ${invoice.id} with no associated subscription — no-op.`);
+      return;
+    }
+
+    // `customer.subscription.updated` already keeps `status`/
+    // `currentPeriodEnd` in sync for the ongoing cases that matter. This
+    // handler exists so a successful renewal charge is visible in logs
+    // (Stripe's own guidance: don't consider a subscription integration
+    // complete without handling invoice events) — no additional local state
+    // update beyond what subscription status sync already does. If a
+    // concrete state change beyond logging turns out to be needed here,
+    // that should be flagged/designed rather than added ad hoc — no new
+    // schema/fields added in this pass.
+    this.logger.log(`invoice.paid for subscription ${subscriptionId} (invoice ${invoice.id}) — renewal payment succeeded.`);
+  }
+
+  private async handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+    const subscriptionId = getInvoiceSubscriptionId(invoice);
+    if (!subscriptionId) {
+      this.logger.warn(`invoice.payment_failed for invoice ${invoice.id} with no associated subscription — no-op.`);
+      return;
+    }
+
+    // Scoped by `stripeSubscriptionId` (unique) — same `updateMany` pattern
+    // as `handleSubscriptionStatusSync`, since it's not the model's primary
+    // key.
+    const { count } = await this.prisma.subscription.updateMany({
+      where: { stripeSubscriptionId: subscriptionId },
+      data: { status: "past_due" },
+    });
+    if (count === 0) {
+      this.logger.warn(
+        `invoice.payment_failed for Stripe subscription ${subscriptionId} (invoice ${invoice.id}) — no local Subscription row found.`,
+      );
+    } else {
+      this.logger.warn(
+        `invoice.payment_failed — marked local Subscription for Stripe subscription ${subscriptionId} (invoice ${invoice.id}) as past_due.`,
+      );
     }
   }
 
@@ -259,4 +401,16 @@ function getCurrentPeriodEnd(subscription: Stripe.Subscription): Date | null {
     return null;
   }
   return new Date(firstItem.current_period_end * 1000);
+}
+
+/**
+ * As of the pinned Stripe API version (`2026-08-26.dahlia`), an `Invoice`
+ * no longer carries a top-level `subscription` field — it moved to
+ * `invoice.parent.subscription_details.subscription` (the "invoice
+ * rendering"/parent-object restructuring). This app only ever needs the
+ * bare id, never the expanded `Subscription` object.
+ */
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
+  const subscription = invoice.parent?.subscription_details?.subscription;
+  return typeof subscription === "string" ? subscription : subscription?.id;
 }

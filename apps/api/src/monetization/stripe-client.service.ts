@@ -29,7 +29,7 @@ export class StripeClientService {
         "Payments are not currently configured. Please try again later.",
       );
     }
-    return new Stripe(apiKey);
+    return new Stripe(apiKey, { apiVersion: "2026-08-26.dahlia" });
   }
 
   getWebhookSecret(): string {

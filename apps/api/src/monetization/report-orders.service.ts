@@ -141,6 +141,12 @@ export class ReportOrdersService {
       cancel_url: REPORT_CHECKOUT_CANCEL_URL,
       customer_email: userEmail,
       metadata: { reportOrderId: order.id },
+      // Managed Payments (enabled by default on this Stripe account) requires
+      // a `tax_code` on every inline product_data line item, which we don't
+      // set — Stripe Tax isn't configured yet (see REQUIREMENTS.md decision
+      // log). Disable it explicitly for now rather than fabricating tax
+      // codes; revisit together when Stripe Tax gets built.
+      managed_payments: { enabled: false },
     });
 
     if (!session.url) {
