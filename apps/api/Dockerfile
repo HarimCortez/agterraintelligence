@@ -18,6 +18,16 @@ WORKDIR /repo
 # all real and git-tracked. One COPY . . sidesteps that entirely.
 COPY . .
 
+# Temporary diagnostic — Railway's build snapshot has been dropping specific
+# files (pnpm-lock.yaml, apparently pnpm-workspace.yaml too) that are
+# definitely git-tracked and present locally. See directly what's actually
+# in the build context instead of guessing further.
+RUN echo "=== /repo top level ===" && ls -la /repo && \
+    echo "=== pnpm-workspace.yaml? ===" && (cat /repo/pnpm-workspace.yaml || echo "MISSING") && \
+    echo "=== pnpm-lock.yaml? ===" && (ls -la /repo/pnpm-lock.yaml || echo "MISSING") && \
+    echo "=== packages/ dir? ===" && (ls -la /repo/packages || echo "MISSING") && \
+    echo "=== apps/ dir? ===" && (ls -la /repo/apps || echo "MISSING")
+
 # Not --frozen-lockfile: Railway's build-context snapshot has been
 # consistently omitting pnpm-lock.yaml even though it's git-tracked and
 # present at the repo root (reproduced identically via both `railway up`
