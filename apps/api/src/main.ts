@@ -28,7 +28,12 @@ async function bootstrap(): Promise<void> {
   );
 
   const port = process.env.PORT ?? 3001;
-  await app.listen(port);
+  // Explicit 0.0.0.0: Node's default listen() host isn't guaranteed to
+  // accept connections from outside the container's loopback interface,
+  // which is what left the Railway edge proxy unable to reach an
+  // otherwise-healthy, fully-started instance (confirmed via runtime logs
+  // showing a clean startup with zero incoming requests ever logged).
+  await app.listen(port, "0.0.0.0");
 }
 
 void bootstrap();
