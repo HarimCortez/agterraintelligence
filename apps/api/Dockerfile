@@ -6,20 +6,15 @@ FROM node:20-slim AS base
 RUN corepack enable
 WORKDIR /repo
 
-# Copy just the manifests first for better layer caching, then the full
-# source. Includes every workspace's package.json so pnpm's workspace
-# resolution has everything it needs before `pnpm install`.
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY apps/api/package.json apps/api/package.json
-COPY apps/investor-web/package.json apps/investor-web/package.json
-COPY apps/admin-web/package.json apps/admin-web/package.json
-COPY packages/db/package.json packages/db/package.json
-COPY packages/ui/package.json packages/ui/package.json
-COPY packages/config/package.json packages/config/package.json
+# Single copy of the whole monorepo — sacrifices some Docker layer-cache
+# efficiency (a source-only change re-runs install too) in exchange for
+# reliability: many separate sparse COPY commands across subdirectories
+# were consistently failing Railway's build-context snapshot with
+# "not found" errors on every single one, even though the files are
+# all real and git-tracked. One COPY . . sidesteps that entirely.
+COPY . .
 
 RUN pnpm install --frozen-lockfile
-
-COPY . .
 
 RUN pnpm --filter @agterra/api build
 
