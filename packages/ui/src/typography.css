@@ -1,0 +1,78 @@
+/**
+ * Typography system: CSS custom properties and utilities
+ * Defined once in @agterra/ui, consumed everywhere
+ */
+
+:root {
+  /* Font family stacks */
+  --font-sans: var(--inter-font), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--source-serif-font), Georgia, serif;
+  --font-mono: var(--jetbrains-mono-font), SFMono-Regular, Courier, monospace;
+
+  /* Text size tokens with line-height and letter-spacing */
+  --text-xs: 0.75rem; /* 12px */
+  --text-xs-lh: 1.4;
+  --text-xs-tracking: 0.03em; /* All-caps labels only */
+
+  --text-sm: 0.8125rem; /* 13px */
+  --text-sm-lh: 1.45;
+  --text-sm-tracking: 0;
+
+  --text-base: 0.875rem; /* 14px */
+  --text-base-lh-ui: 1.3;
+  --text-base-lh-prose: 1.5;
+  --text-base-tracking: 0;
+
+  --text-md: 1rem; /* 16px */
+  --text-md-lh-prose: 1.5;
+  --text-md-lh-ui: 1.3;
+  --text-md-tracking: 0;
+
+  --text-lg: 1.125rem; /* 18px */
+  --text-lg-lh: 1.3;
+  --text-lg-tracking: -0.01em;
+
+  --text-xl: 1.25rem; /* 20px */
+  --text-xl-lh: 1.25;
+  --text-xl-tracking: -0.015em;
+
+  --text-2xl: 1.5rem; /* 24px */
+  --text-2xl-lh: 1.2;
+  --text-2xl-tracking: -0.015em;
+
+  --text-headline-serif: 1.5rem; /* 24px, serif accent */
+  --text-headline-serif-lh: 1.3;
+  --text-headline-serif-tracking: -0.01em;
+
+  --text-3xl: 2rem; /* 32px */
+  --text-3xl-lh: 1.15;
+  --text-3xl-tracking: -0.02em;
+
+  --text-4xl: 2.5rem; /* 40px */
+  --text-4xl-lh: 1.1;
+  --text-4xl-tracking: -0.02em;
+
+  --text-display: 2.5rem; /* 40px, serif accent, Opportunity Score only */
+  --text-display-lh: 1.1;
+  --text-display-tracking: -0.02em;
+
+  --text-mono: 0.8125rem; /* 13px, monospace */
+  --text-mono-lh: 1.4;
+  --text-mono-tracking: 0;
+
+  /* Tracking (letter-spacing) values */
+  --tracking-label: 0.03em; /* All-caps labels */
+  --tracking-tight-heading: -0.015em;
+  --tracking-body: 0;
+
+  /* Line-height categories */
+  --leading-ui: 1.3;
+  --leading-prose: 1.5;
+  --leading-headline: 1.3;
+}
+
+/* Utility class for tabular numerals - use on any element containing numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums lining-nums;
+}

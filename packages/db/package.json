@@ -1,0 +1,33 @@
+{
+  "name": "@agterra/db",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Prisma schema, migrations, and generated client for the AgTerra Intelligence PostgreSQL/PostGIS database. Single source of truth for the data model; consumed by apps/api (and, later, workers/scripts) via the workspace dependency.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:status": "prisma migrate status",
+    "migrate:reset": "prisma migrate reset",
+    "seed": "prisma db seed",
+    "studio": "prisma studio",
+    "build": "prisma generate && tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --ext .ts --max-warnings 0",
+    "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json",
+    "test": "echo \"no tests yet\" && exit 0",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1"
+  },
+  "devDependencies": {
+    "@agterra/config": "workspace:*",
+    "dotenv": "^16.4.7",
+    "eslint": "^8.57.1",
+    "prisma": "^6.2.1",
+    "tsx": "^4.23.13",
+    "typescript": "^5.7.2"
+  }
+}

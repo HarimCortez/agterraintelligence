@@ -1,0 +1,10 @@
+{
+  "extends": "@agterra/config/base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "noEmit": true
+  },
+  "include": ["src", "prisma.config.ts", "prisma/seed.ts"]
+}

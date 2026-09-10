@@ -1,0 +1,696 @@
+// AgTerra Intelligence — Prisma schema
+//
+// Scope: Identity & Access domain only (Phase 0 continuation), per
+// ARCHITECTURE.md's "Database Changes" > "Identity & accounts" section.
+//
+// Do NOT add properties/geospatial, monetization, engagement, or AI/support
+// tables here yet — those land in later phases per ARCHITECTURE.md's build
+// sequence. The `postgis` extension is enabled now (via the datasource
+// `extensions` list below) because enabling an extension requires a
+// migration, even though no geometry/geography columns exist in this pass.
+//
+// Org-seam requirement (ARCHITECTURE.md "Implementation Constraints" #1):
+// `organizations` and `users.org_id` ship in this, the first migration —
+// not deferred. `org_id` is nullable and unpopulated for every MVP user;
+// AccountContext resolution (org if present, else self) is `be`'s concern,
+// not this schema's.
+//
+// Admin auth-plane isolation (Implementation Constraints, PRD Decision 6):
+// `admin_users` is a wholly separate table from `users`, not a role flag,
+// so a compromised investor session can never reach admin surface via the
+// data model.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  // PostGIS is enabled here (Phase 0) even though no geometry/geography
+  // columns exist yet — Property & Geospatial tables (properties, reference
+  // layers, etc.) land in Phase 1 and will consume this same extension.
+  extensions = [postgis]
+}
+
+// ---------------------------------------------------------------------------
+// Organizations (org-seam — present, unused in MVP)
+// ---------------------------------------------------------------------------
+
+enum OrganizationStatus {
+  active
+  suspended
+  closed
+
+  @@map("organization_status")
+}
+
+model Organization {
+  id               String             @id @default(uuid()) @db.Uuid
+  name             String
+  billingAccountId String?            @map("billing_account_id")
+  status           OrganizationStatus @default(active)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("organizations")
+}
+
+// ---------------------------------------------------------------------------
+// Investor-plane users
+// ---------------------------------------------------------------------------
+
+// External RBAC (7 roles) — REQUIREMENTS.md Section 9.4 / ARCHITECTURE.md.
+// `team_admin`/`team_member` are dormant per Product Decision #1: the enum
+// values ship now, but no logic depends on them until `org_id` is populated.
+enum ExternalRole {
+  free
+  basic_subscriber
+  investor_subscriber
+  professional_subscriber
+  institutional
+  team_admin
+  team_member
+
+  @@map("external_role")
+}
+
+enum UserStatus {
+  pending_verification
+  active
+  suspended
+  deactivated
+
+  @@map("user_status")
+}
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  externalRole ExternalRole @default(free) @map("external_role")
+
+  // Org-seam: nullable today, populated only once org support activates.
+  // Downstream code must resolve tenancy via AccountContext, never by
+  // querying this column directly as the sole scope boundary (be's concern).
+  orgId String?       @map("org_id") @db.Uuid
+  org   Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  status    UserStatus @default(pending_verification)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  refreshTokens   RefreshToken[]
+  watchlistItems  WatchlistItem[]
+  savedSearches   SavedSearch[]
+  subscription    Subscription?
+  reportOrders    ReportOrder[]
+
+  @@index([orgId])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Admin-plane users (separate table — auth-plane isolation)
+// ---------------------------------------------------------------------------
+
+// Internal RBAC (8 roles) — REQUIREMENTS.md Section 9.4 persona table.
+enum InternalRole {
+  super_admin
+  admin
+  support_agent
+  data_qa_reviewer
+  report_fulfillment_manager
+  billing_manager
+  ai_model_monitor
+  readonly_analyst
+
+  @@map("internal_role")
+}
+
+enum AdminUserStatus {
+  active
+  suspended
+  deactivated
+
+  @@map("admin_user_status")
+}
+
+model AdminUser {
+  id           String       @id @default(uuid()) @db.Uuid
+  email        String       @unique
+  passwordHash String       @map("password_hash")
+  internalRole InternalRole @map("internal_role")
+
+  // Nullable: populated during MFA enrollment, which happens after account
+  // creation. `be`'s admin-auth module is expected to refuse admin login
+  // until this is set, per ARCHITECTURE.md's "MFA-required" admin session
+  // policy — that check is application logic, not a NOT NULL constraint,
+  // since an admin_users row must be creatable before enrollment completes.
+  mfaSecret String? @map("mfa_secret")
+
+  status    AdminUserStatus @default(active)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  reviewedPermissions RolePermission[]    @relation("RolePermissionUpdatedBy")
+  refreshTokens       AdminRefreshToken[]
+
+  @@map("admin_users")
+}
+
+// ---------------------------------------------------------------------------
+// Admin RBAC policy table
+// ---------------------------------------------------------------------------
+
+// Table-driven internal RBAC (ARCHITECTURE.md "Authentication / Authorization"
+// > "Internal RBAC"): `be` checks `(role, permission_key) -> allowed` here
+// instead of branching on role in code, so new permission keys (e.g.
+// `billing.refund`, `data.edit`, `ai_settings.write`, `audit_log.read`) can
+// be added by inserting rows, not redeploying.
+model RolePermission {
+  id            String       @id @default(uuid()) @db.Uuid
+  role          InternalRole
+  permissionKey String       @map("permission_key")
+  allowed       Boolean      @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Optional audit trail of which admin last changed a policy row — useful
+  // once the Administration Settings screen lets Super Admins edit this
+  // table, but not required for it to function.
+  updatedById String?    @map("updated_by_id") @db.Uuid
+  updatedBy   AdminUser? @relation("RolePermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([role, permissionKey])
+  @@index([permissionKey])
+  @@map("role_permissions")
+}
+
+// ---------------------------------------------------------------------------
+// Rotating refresh token storage (added by `be` on top of `data`'s original
+// Identity & Access schema, still within Phase 0 / Identity & Access scope)
+// ---------------------------------------------------------------------------
+//
+// ARCHITECTURE.md's Authentication/Authorization section calls for "rotating
+// refresh tokens" on both auth planes. That requires somewhere to persist
+// the current valid token per session so a refresh can be verified, rotated
+// (old marked used/revoked, new issued), and revoked on logout — none of
+// `data`'s four original tables cover this, so `be` is adding it here rather
+// than approximating rotation statelessly. Mirrors the existing
+// users/admin_users separation: two tables, not one polymorphic table, so
+// the plane isolation the architecture calls for extends to session storage
+// too. Flagging for `data`/`arch` awareness since it's a schema addition
+// made outside the original hand-off.
+//
+// Only a SHA-256 hash of the opaque token value is stored (`token_hash`),
+// never the raw token — the raw value is returned to the client once, at
+// issuance, embedded in a signed JWT (see `be`'s TokenService). Rotation
+// chains are threaded via `replaced_by_id` so token reuse (presenting an
+// already-rotated token) is detectable and treated as a signal to revoke
+// the whole chain.
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  replacedById String?       @unique @map("replaced_by_id") @db.Uuid
+  replacedBy   RefreshToken? @relation("RefreshTokenRotation", fields: [replacedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  replaces     RefreshToken? @relation("RefreshTokenRotation")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AdminRefreshToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  adminUserId String    @map("admin_user_id") @db.Uuid
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+
+  replacedById String?            @unique @map("replaced_by_id") @db.Uuid
+  replacedBy   AdminRefreshToken? @relation("AdminRefreshTokenRotation", fields: [replacedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  replaces     AdminRefreshToken? @relation("AdminRefreshTokenRotation")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+
+  @@index([adminUserId])
+  @@map("admin_refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Property & Geospatial — first-pass slice for "Discover + Map Workspace"
+// ---------------------------------------------------------------------------
+//
+// Scope note: this is deliberately narrower than the full Property &
+// Geospatial design in ARCHITECTURE.md's "Database Changes" section. Built
+// here: `properties`, `opportunity_scores`, `property_valuations`,
+// `property_risk_flags` — enough for a ranked/filterable list+map view.
+// NOT built here (later phases per ARCHITECTURE.md's build sequence):
+// `comparables`, `property_data_sources`, reference geospatial layers
+// (`county_boundaries`, `soil_map_units`, `flood_zones`, `wetland_areas`),
+// `boundary` polygon on `properties`, and anything monetization/report-
+// related. Escalate to `arch` before adding any of those.
+//
+// PostGIS note: `location` uses Prisma's `Unsupported(...)` type because
+// Prisma Client has no native geography type. This means the generated
+// Prisma Client cannot read/write `location` through normal model queries —
+// reads/writes of `location` must go through `$queryRaw`/`$executeRaw`
+// (e.g. `ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography`). The GIST
+// index on `location` is added by hand in the migration SQL (Prisma does
+// not know how to index an Unsupported column from schema alone).
+//
+// KNOWN FOOTGUN: because that GIST index (and the hand-added CHECK
+// constraints in the same migration) are invisible to Prisma's schema
+// model, running `prisma migrate dev` again locally will report phantom
+// drift and offer to generate a follow-up migration that DROPS
+// `properties_location_idx`. Do not accept that prompt. Use
+// `prisma migrate deploy` for repeatable/CI applies (it only replays
+// pending migration files, no interactive schema-diff step); if a real new
+// migration is needed via `migrate dev`, review the generated SQL and
+// strip any `DROP INDEX "properties_location_idx"` before applying.
+
+enum ListingStatus {
+  active
+  pending
+  sold
+  off_market
+
+  @@map("listing_status")
+}
+
+// Florida agricultural land-use categories — covers the range `properties`
+// seed data and the Discover workspace need for MVP. Not exhaustive of every
+// FL ag classification; extend via migration as real ingestion sources
+// surface categories not covered here.
+enum LandUseType {
+  row_crop
+  pasture
+  timber
+  citrus
+  mixed_agricultural
+  vacant_agricultural
+
+  @@map("land_use_type")
+}
+
+// Matches PRD's Opportunity Score bands (REQUIREMENTS.md Section 8.1)
+// exactly: 90-100 exceptional, 80-89 strong, 70-79 promising, 60-69 watch,
+// <60 limited. Stored explicitly (not derived by callers) per spec; a CHECK
+// constraint (see migration SQL) enforces score/band consistency at the DB
+// level so a bad write can never desync the two.
+enum OpportunityBand {
+  exceptional
+  strong
+  promising
+  watch
+  limited
+
+  @@map("opportunity_band")
+}
+
+// Data-confidence states required by REQUIREMENTS.md Section 7.2 / DoD #7 —
+// same four states ARCHITECTURE.md's fuller `property_data_sources` design
+// uses; here applied at the valuation level since field-level confidence
+// tracking (`property_data_sources`) is out of scope for this pass.
+enum ValuationConfidence {
+  verified
+  modeled
+  ai_inferred
+  unknown
+
+  @@map("valuation_confidence")
+}
+
+enum RiskSeverity {
+  low
+  medium
+  high
+
+  @@map("risk_severity")
+}
+
+model Property {
+  id String @id @default(uuid()) @db.Uuid
+
+  county String
+  state  String @default("FL")
+
+  // Unique per-parcel identifier from the county property appraiser /
+  // source system. Real dedup/ingestion matching (ARCHITECTURE.md's
+  // "Ingestion" data flow) is a later phase; the unique constraint here is
+  // the minimum integrity guarantee for this pass.
+  parcelId String @unique @map("parcel_id")
+
+  // Human-readable label for the property card/list (e.g. "1,200-Acre Row
+  // Crop Tract, Okeechobee County") — rural agricultural parcels frequently
+  // have no real street address, so this is a display label, not a mailing
+  // address. Named `address` to match ARCHITECTURE.md's field name.
+  address String
+
+  // geography(Point, 4326) — see file-header PostGIS note. NOT NULL: every
+  // property needs a location to render on the map.
+  location Unsupported("geography(Point, 4326)")
+
+  acreage          Decimal       @db.Decimal(10, 2)
+  askingPriceCents Int           @map("asking_price_cents")
+  listingStatus    ListingStatus @default(active) @map("listing_status")
+  landUseType      LandUseType   @map("land_use_type")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  opportunityScore  OpportunityScore?
+  valuation         PropertyValuation?
+  riskFlags         PropertyRiskFlag[]
+  aiInteractions    AiInteraction[]
+  watchlistItems    WatchlistItem[]
+  reportOrders      ReportOrder[]
+
+  @@index([county])
+  @@index([state])
+  @@index([listingStatus])
+  @@index([landUseType])
+  @@map("properties")
+}
+
+// One-to-one with `properties`. `band` is stored (not recomputed by
+// callers) but kept consistent with `score` via a DB CHECK constraint
+// (added by hand in migration SQL) matching the PRD's band ranges exactly.
+model OpportunityScore {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  score Int
+  band  OpportunityBand
+
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([band])
+  @@index([score])
+  @@map("opportunity_scores")
+}
+
+// One-to-one with `properties`. `discount_pct` is signed: positive means
+// asking price sits below AgTerra's estimated value (undervalued); negative
+// means asking price exceeds the estimate.
+model PropertyValuation {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  estimatedValueCents Int                 @map("estimated_value_cents")
+  discountPct         Decimal             @map("discount_pct") @db.Decimal(6, 2)
+  confidence          ValuationConfidence
+
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([confidence])
+  @@map("property_valuations")
+}
+
+// Many-per-property. `risk_type` is intentionally a free string, not an
+// enum — the real risk taxonomy isn't defined yet (per hand-off scope);
+// revisit as an enum once that taxonomy is confirmed with `arch`/`ux`.
+model PropertyRiskFlag {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  riskType    String       @map("risk_type")
+  severity    RiskSeverity
+  description String       @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([propertyId])
+  @@index([severity])
+  @@map("property_risk_flags")
+}
+
+// ---------------------------------------------------------------------------
+// AI Interactions — AI Response Storage
+// ---------------------------------------------------------------------------
+//
+// Stores structured AI interactions (questions, analyses, responses) scoped
+// initially to single-property context (v1) per REQUIREMENTS.md's decision log.
+// Designed to accommodate future context types (report, comparison, portfolio)
+// via `context_type` string field, but no UI/endpoint for user feedback yet —
+// `feedback` column omitted until that workflow is implemented.
+//
+// `response` is stored as JSONB holding the structured shape per
+// ARCHITECTURE.md's AI Response Pattern: { conclusion, evidence, risks,
+// confidence, sources, nextAction }. Internal shape validation is the
+// application layer's responsibility, not enforced at the DB level.
+
+model AiInteraction {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Nullable FK to properties — scoped to property context in v1, but allows
+  // future context types (report, comparison, portfolio). Other context types
+  // will reference different tables (once created), so property_id is nullable.
+  propertyId String?  @map("property_id") @db.Uuid
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // Context type (e.g. "property", "report", "comparison", "portfolio").
+  // Kept as free string (not enum) since the full set isn't finalized yet —
+  // revisit as enum once confirmed.
+  contextType String @map("context_type")
+
+  // User question that prompted this response. Null for auto-generated
+  // analyses/theses not prompted by a specific user question.
+  question String? @db.Text
+
+  // Structured AI response (JSONB). Shape per ARCHITECTURE.md's AI Response
+  // Pattern: { conclusion, evidence, risks, confidence, sources, nextAction }.
+  // Application layer handles internal validation.
+  response Json
+
+  // Which Claude model version generated this response (e.g. "claude-3-5-sonnet").
+  modelVersion String @map("model_version")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([propertyId])
+  @@index([contextType])
+  @@index([createdAt])
+  @@map("ai_interactions")
+}
+
+// ---------------------------------------------------------------------------
+// User Watchlist — per-user tracked properties
+// ---------------------------------------------------------------------------
+//
+// Stores which properties a user is monitoring. Each watchlist_item row
+// represents one property a user has added to their watchlist.
+// ON DELETE CASCADE ensures that deleting a user or a property removes
+// the corresponding watchlist entries.
+// A unique constraint on (user_id, property_id) prevents duplicate entries.
+
+model WatchlistItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  propertyId String   @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@index([propertyId])
+  @@map("watchlist_items")
+}
+
+// ---------------------------------------------------------------------------
+// Saved Searches — per-user saved search criteria
+// ---------------------------------------------------------------------------
+//
+// Stores user-defined saved searches with filter criteria.
+// `criteria` is a JSONB column holding the search filter shape:
+// { minPrice, maxPrice, minAcreage, maxAcreage, minScore, maxScore,
+//   band[], landUseType[], county, sort }
+// The application layer is responsible for validating the internal shape.
+// ON DELETE CASCADE ensures that deleting a user removes all their saved searches.
+
+model SavedSearch {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  name      String   // User-supplied label (e.g. "Okeechobee under $1M")
+  criteria  Json     // JSONB: filter criteria shape per GET /v1/properties query params
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("saved_searches")
+}
+
+// ---------------------------------------------------------------------------
+// Monetization — subscriptions, report-tier catalog, report orders
+// ---------------------------------------------------------------------------
+//
+// Scope: the billing *record* behind `users.external_role`, per
+// REQUIREMENTS.md decision log items 9/10 and ARCHITECTURE.md's Monetization
+// section (`/v1/subscriptions/*`, `/v1/report-tiers`, `/v1/report-orders/*`).
+// `external_role` remains the fast-access tier flag application code checks
+// for authorization; `subscriptions` is the underlying paid-plan record that
+// keeps it in sync (that sync job is `be`'s concern, not this schema's).
+//
+// - Free is not represented as a `Subscription` row — it's the absence of
+//   one (and the user's default `external_role = free`). Institutional is
+//   out of scope entirely per the decision log (custom/sales-quoted).
+// - One active subscription per user for v1: `userId` is unique.
+// - `report_tiers` is small seeded reference data (four rows: essential,
+//   investor, professional, premium), not user-generated — see
+//   `prisma/seed.ts`. Premium has a row (pricing-page display) but isn't
+//   purchasable yet (`requiresHumanReview = true`; the review-queue
+//   subsystem that would move a Premium order out of `awaiting_review`
+//   doesn't exist yet).
+// - `report_orders.status` carries the full state machine from
+//   ARCHITECTURE.md's fulfillment path (`pending_payment` -> `queued` ->
+//   `generating` -> `awaiting_review`/`approved` -> `delivered`, with
+//   `failed`/`refunded` branches) even though this pass's automated tiers
+//   only ever exercise pending_payment -> queued -> generating ->
+//   delivered/failed — Premium's future review-queue routing reuses the
+//   same enum rather than requiring a breaking migration later.
+// - `upgradeCreditAppliedCents` and `pricePaidCents` follow ARCHITECTURE.md's
+//   Implementation Constraint #4: upgrade-credit math is computed against
+//   the price actually paid, never against tier list price.
+
+enum SubscriptionPlan {
+  basic
+  investor
+  professional
+
+  @@map("subscription_plan")
+}
+
+enum SubscriptionStatus {
+  active
+  canceled
+  past_due
+  incomplete
+
+  @@map("subscription_status")
+}
+
+model Subscription {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  plan SubscriptionPlan
+
+  // Null until the user's first Stripe interaction (e.g. Checkout session
+  // created but not yet completed).
+  stripeCustomerId     String? @map("stripe_customer_id")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+
+  status           SubscriptionStatus
+  currentPeriodEnd DateTime?          @map("current_period_end") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// Small seeded reference/lookup table (not per-user data) — see
+// `prisma/seed.ts` for the four canonical rows and confirmed launch prices.
+model ReportTier {
+  code String @id
+
+  displayName             String  @map("display_name")
+  subscriberPriceCents    Int     @map("subscriber_price_cents")
+  nonSubscriberPriceCents Int     @map("non_subscriber_price_cents")
+  requiresHumanReview     Boolean @default(false) @map("requires_human_review")
+  sortOrder               Int     @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  reportOrders ReportOrder[]
+
+  @@map("report_tiers")
+}
+
+enum ReportPriceBasis {
+  subscriber
+  non_subscriber
+
+  @@map("report_price_basis")
+}
+
+// Full fulfillment state machine per ARCHITECTURE.md's report purchase ->
+// fulfillment path. Essential/Investor/Professional (this pass's automated
+// tiers) only ever exercise pending_payment -> queued -> generating ->
+// delivered/failed; awaiting_review/approved exist now so Premium's future
+// human-review routing doesn't require a breaking enum change later.
+enum ReportOrderStatus {
+  pending_payment
+  queued
+  generating
+  awaiting_review
+  approved
+  delivered
+  failed
+  refunded
+
+  @@map("report_order_status")
+}
+
+model ReportOrder {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  propertyId String   @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  reportTierCode String     @map("report_tier_code")
+  reportTier     ReportTier @relation(fields: [reportTierCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
+
+  pricePaidCents            Int               @map("price_paid_cents")
+  priceBasis                ReportPriceBasis  @map("price_basis")
+  upgradeCreditAppliedCents Int               @default(0) @map("upgrade_credit_applied_cents")
+  status                    ReportOrderStatus @map("status")
+
+  stripeCheckoutSessionId String? @map("stripe_checkout_session_id")
+  stripePaymentIntentId   String? @map("stripe_payment_intent_id")
+
+  // Persisted AI-generated report content once status = delivered; null
+  // until then. Shape per REQUIREMENTS.md decision log #10 (tier-scoped-
+  // depth AI investment analysis) — application-layer concern, not enforced
+  // at the DB level, matching `ai_interactions.response`'s existing pattern.
+  content Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([reportTierCode])
+  @@index([status])
+  @@map("report_orders")
+}

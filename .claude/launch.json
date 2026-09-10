@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-lc",
+        "pnpm run dev"
+      ],
+      "port": 3000
+    }
+  ]
+}

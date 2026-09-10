@@ -1,0 +1,97 @@
+/**
+ * Color & Spacing system — Discover + Map Workspace (Pass 1)
+ * Source: DESIGN-SYSTEM.md "Color & Spacing — Discover + Map Workspace (Pass 1)"
+ * Defined once in @agterra/ui, consumed everywhere. Same naming convention as
+ * typography.css's --font- and --text- custom properties.
+ *
+ * Scope: app shell (nav rail + light workspace), property card, Opportunity
+ * Score badge, risk flag badge, data confidence indicator, filter panel, map
+ * marker colors, and a small spacing scale. Light mode only — the dark nav
+ * rail is a fixed surface, not a theme toggle.
+ */
+
+:root {
+  /* --- Neutrals & App Shell --- */
+  --color-nav-bg: #10151c;
+  --color-nav-text: #f4f6f8;
+  --color-nav-text-muted: #a8b1bd;
+  --color-workspace-bg: #eef1f4;
+  --color-surface: #ffffff;
+  --color-border-subtle: #e2e5ea;
+  --color-border-default: #d7dbe2;
+  --color-text-primary: #14181f;
+  --color-text-secondary: #4b5563;
+
+  /* --- Semantic accents --- */
+  --color-action-primary: #2563eb;
+  --color-gold-accent: #c9971c;
+
+  /* --- Opportunity Score bands --- */
+  --color-score-exceptional-bg: #14532d;
+  --color-score-exceptional-text: #ffffff;
+  --color-score-exceptional-accent: #c9971c;
+
+  --color-score-strong-bg: #1e7a42;
+  --color-score-strong-text: #ffffff;
+
+  --color-score-promising-bg: #e3f2e7;
+  --color-score-promising-text: #1b5e36;
+  --color-score-promising-border: #bfe5cb;
+
+  --color-score-watch-bg: #475569;
+  --color-score-watch-text: #ffffff;
+
+  --color-score-limited-bg: #e9ebef;
+  --color-score-limited-text: #374151;
+  --color-score-limited-border: #d7dbe2;
+
+  /* --- Risk flag severity --- */
+  --color-risk-low-bg: #fef3c7;
+  --color-risk-low-text: #92400e;
+
+  --color-risk-medium-bg: #b45309;
+  --color-risk-medium-text: #ffffff;
+
+  --color-risk-high-bg: #b91c1c;
+  --color-risk-high-text: #ffffff;
+
+  /* --- Data confidence --- */
+  --color-confidence-verified-bg: #dbeafe;
+  --color-confidence-verified-text: #1e40af;
+
+  --color-confidence-modeled-bg: #ffffff;
+  --color-confidence-modeled-text: #1d4ed8;
+  --color-confidence-modeled-border: #93c5fd;
+
+  --color-confidence-ai-inferred-bg: #ede9fe;
+  --color-confidence-ai-inferred-text: #5b21b6;
+
+  --color-confidence-unknown-bg: #f1f5f9;
+  --color-confidence-unknown-text: #475569;
+  --color-confidence-unknown-border: #94a3b8;
+
+  /* --- Filter panel --- */
+  --color-filter-panel-bg: #ffffff;
+  --color-filter-panel-border: #d7dbe2;
+  --color-filter-chip-active-bg: #dbeafe;
+  --color-filter-chip-active-text: #1e40af;
+  --color-filter-chip-active-border: #93c5fd;
+  --color-filter-chip-inactive-bg: #f1f5f9;
+  --color-filter-chip-inactive-text: #475569;
+  --color-filter-chip-inactive-border: #e2e5ea;
+
+  /* --- Map marker score-band fills (flat hues, no gold/tint at marker scale) --- */
+  --color-marker-exceptional: #14532d;
+  --color-marker-strong: #1e7a42;
+  --color-marker-promising: #3fa65c;
+  --color-marker-watch: #64748b;
+  --color-marker-limited: #cbd5e1;
+
+  /* --- Spacing scale (base unit 4px) --- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+}

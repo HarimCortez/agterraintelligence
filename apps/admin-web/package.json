@@ -1,0 +1,33 @@
+{
+  "name": "@agterra/admin-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "AgTerra Intelligence admin console (Next.js App Router), a separate deployment target per the architecture's admin/investor plane-isolation decision. Phase 0 skeleton — no modules implemented yet.",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3100",
+    "start": "next start --port 3100",
+    "lint": "next lint --max-warnings 0",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo \"no tests yet\" && exit 0",
+    "clean": "rm -rf .next .turbo"
+  },
+  "dependencies": {
+    "@agterra/ui": "workspace:*",
+    "next": "^14.2.21",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@agterra/config": "workspace:*",
+    "@types/node": "^20.17.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.5.5",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.21",
+    "postcss": "^8.5.28",
+    "tailwindcss": "3",
+    "typescript": "^5.7.2"
+  }
+}

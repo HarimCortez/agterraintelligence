@@ -1,0 +1,27 @@
+name: agterra-intelligence
+
+# Local dev infrastructure. Currently just Postgres+PostGIS (Identity &
+# Access phase). Redis/OpenSearch services will be added here as the
+# modules that need them (BullMQ job queues, search sync) come online in
+# later phases — do not add them speculatively ahead of that work.
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: agterra-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agterra
+      POSTGRES_PASSWORD: agterra_dev_password
+      POSTGRES_DB: agterra
+    ports:
+      - "5432:5432"
+    volumes:
+      - agterra_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agterra -d agterra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  agterra_postgres_data:

@@ -1,0 +1,37 @@
+{
+  "name": "@agterra/investor-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "AgTerra Intelligence investor-facing web app (Next.js App Router). Phase 0 skeleton — no screens implemented yet.",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3000",
+    "start": "next start --port 3000",
+    "lint": "next lint --max-warnings 0",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo \"no tests yet\" && exit 0",
+    "clean": "rm -rf .next .turbo"
+  },
+  "dependencies": {
+    "@agterra/ui": "workspace:*",
+    "@tanstack/react-query": "^5.102.8",
+    "mapbox-gl": "^3.30.0",
+    "next": "^14.2.21",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@agterra/config": "workspace:*",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^20.17.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.5.5",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.21",
+    "postcss": "^8.5.28",
+    "tailwindcss": "3",
+    "typescript": "^5.7.2"
+  }
+}

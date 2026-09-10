@@ -1,0 +1,25 @@
+{
+  "name": "agterra-intelligence",
+  "private": true,
+  "version": "0.0.0",
+  "description": "AgTerra Intelligence monorepo (Turborepo + pnpm workspaces)",
+  "engines": {
+    "node": ">=20 <21",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "eslint": "^8.57.1",
+    "prettier": "^3.4.2"
+  }
+}

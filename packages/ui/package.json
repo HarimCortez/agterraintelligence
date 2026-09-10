@@ -1,0 +1,26 @@
+{
+  "name": "@agterra/ui",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Shared UI component library consumed by investor-web and admin-web (Phase 0 skeleton, no components yet)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "echo \"no tests yet\" && exit 0",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@agterra/config": "workspace:*",
+    "@types/react": "^18.3.18",
+    "eslint": "^8.57.1",
+    "postcss": "^8.5.28",
+    "tailwindcss": "3",
+    "typescript": "^5.7.2"
+  }
+}

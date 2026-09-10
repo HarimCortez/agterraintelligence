@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "@agterra/ui/src/typography.css";
+@import "@agterra/ui/src/colors.css";
+
+body {
+  background-color: var(--color-workspace-bg);
+  color: var(--color-text-primary);
+}

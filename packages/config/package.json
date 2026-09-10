@@ -1,0 +1,23 @@
+{
+  "name": "@agterra/config",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Shared TypeScript/ESLint/Prettier base configuration for the AgTerra Intelligence monorepo",
+  "main": "index.js",
+  "files": [
+    "base.json",
+    "nestjs.json",
+    "nextjs.json",
+    "eslint-base.cjs",
+    "prettier-base.cjs"
+  ],
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint-config-prettier": "^9.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "typescript": "^5.7.2"
+  }
+}

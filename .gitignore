@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# NestJS
+apps/api/dist/
+
+# Next.js
+apps/*/.next/
+apps/*/out/
+next-env.d.ts
+
+# Testing / coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Misc
+*.pem
+.vercel
+
+# Stripe skills accidentally installed into this project directory while
+# working on an unrelated business's (Telligentia) Stripe integration —
+# doesn't belong in AgTerra's repo.
+.agents/
+.claude/skills/
