@@ -40,6 +40,11 @@ export function AdminNavLinks() {
           Revenue Analytics
         </Link>
       </li>
+      <li>
+        <Link href="/audit" className={linkClass(pathname === "/audit")}>
+          Audit Log
+        </Link>
+      </li>
     </ul>
   );
 }

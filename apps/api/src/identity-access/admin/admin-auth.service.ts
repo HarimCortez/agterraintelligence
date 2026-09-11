@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { AdminUser } from "@agterra/db";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { AuditLogService } from "../../common/audit/audit-log.service";
 import { TokenService } from "../tokens/token.service";
 import { parseDurationMs } from "../tokens/duration";
 import { RequestMeta } from "../investor/investor.types";
@@ -43,28 +44,49 @@ export class AdminAuthService {
     private readonly tokens: TokenService,
     private readonly config: ConfigService,
     private readonly mfa: MfaService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async login(dto: AdminLoginDto, meta: RequestMeta): Promise<AdminAuthTokens> {
+    // Every failure path below records a `admin.login.failed` audit entry
+    // before throwing — `actorId` is set whenever a real admin_users row
+    // was found (even if the password/MFA check then failed), and left
+    // null only for an unrecognized email, since there's no row to
+    // reference. `meta` (IP/user-agent) is included so a real login-
+    // failure audit trail is actually useful for spotting brute-force
+    // attempts, not just "someone failed once."
+    const logFailure = (reason: string, admin: AdminUser | null) =>
+      this.auditLog.record({
+        actorId: admin?.id ?? null,
+        actorEmail: dto.email,
+        action: "admin.login.failed",
+        metadata: { reason, ipAddress: meta.ipAddress ?? null, userAgent: meta.userAgent ?? null },
+      });
+
     const admin = await this.prisma.adminUser.findUnique({ where: { email: dto.email } });
     const invalidCredentials = () => new UnauthorizedException("Invalid email or password");
     if (!admin) {
+      await logFailure("unknown_email", null);
       throw invalidCredentials();
     }
     const passwordOk = await bcrypt.compare(dto.password, admin.passwordHash);
     if (!passwordOk) {
+      await logFailure("invalid_password", admin);
       throw invalidCredentials();
     }
     if (admin.status !== "active") {
+      await logFailure("account_inactive", admin);
       throw new UnauthorizedException("Account is not active");
     }
 
     if (admin.mfaSecret) {
       if (!dto.totpCode) {
+        await logFailure("mfa_required", admin);
         throw new MfaRequiredException();
       }
       const codeOk = await this.mfa.verifyCode(admin.mfaSecret, dto.totpCode);
       if (!codeOk) {
+        await logFailure("invalid_mfa_code", admin);
         throw new MfaRequiredException("Invalid MFA code");
       }
     }
@@ -72,6 +94,12 @@ export class AdminAuthService {
     // scope note; a product decision is needed on hard-gating this.
 
     const issued = await this.issueTokens(admin, meta);
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "admin.login.success",
+      metadata: { ipAddress: meta.ipAddress ?? null, userAgent: meta.userAgent ?? null },
+    });
     return { accessToken: issued.accessToken, refreshToken: issued.refreshToken, adminUser: issued.adminUser };
   }
 

@@ -2,6 +2,8 @@ import { Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from "@
 import { AdminJwtAuthGuard } from "../identity-access/admin/admin-jwt-auth.guard";
 import { PermissionsGuard } from "../identity-access/admin/permissions.guard";
 import { RequirePermission } from "../identity-access/admin/require-permission.decorator";
+import { CurrentAdmin } from "../identity-access/admin/current-admin.decorator";
+import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { AdminReportFulfillmentService } from "./admin-report-fulfillment.service";
 import { ListAdminFulfillmentOrdersQuery } from "./dto/list-fulfillment-orders.query";
 import {
@@ -44,7 +46,10 @@ export class AdminReportFulfillmentController {
 
   @Post("orders/:id/retry")
   @RequirePermission("fulfillment.retry")
-  retryOrder(@Param("id", new ParseUUIDPipe()) id: string): Promise<RetryFulfillmentResponseDto> {
-    return this.fulfillmentService.retryOrder(id);
+  retryOrder(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentAdmin() admin: AuthenticatedAdminUser,
+  ): Promise<RetryFulfillmentResponseDto> {
+    return this.fulfillmentService.retryOrder(id, admin);
   }
 }

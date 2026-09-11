@@ -26,17 +26,21 @@ export function OverviewWorkspace() {
       <div className="rounded border border-border-subtle bg-surface p-lg text-sm text-text-secondary">
         <Link href="/billing" className="text-action-primary underline">
           Billing &amp; Entitlements
-        </Link>{" "}
-        and{" "}
+        </Link>
+        ,{" "}
         <Link href="/fulfillment" className="text-action-primary underline">
           Report Fulfillment
         </Link>
-        , and{" "}
+        ,{" "}
         <Link href="/revenue" className="text-action-primary underline">
           Revenue Analytics
+        </Link>
+        , and{" "}
+        <Link href="/audit" className="text-action-primary underline">
+          Audit Log
         </Link>{" "}
         are live. The rest of the admin console — data-source monitoring, support, content/data QA, AI
-        monitoring, settings, and audit logs — is built in later passes.
+        monitoring, and settings — is built in later passes.
       </div>
     </div>
   );

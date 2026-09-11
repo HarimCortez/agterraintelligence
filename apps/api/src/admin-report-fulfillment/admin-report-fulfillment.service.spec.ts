@@ -1,8 +1,18 @@
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { PrismaService } from "../common/prisma/prisma.service";
+import { AuditLogService } from "../common/audit/audit-log.service";
+import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { ReportGenerationService } from "../monetization/report-generation.service";
 import { AdminReportFulfillmentService } from "./admin-report-fulfillment.service";
+
+const ADMIN: AuthenticatedAdminUser = {
+  id: "admin-1",
+  email: "admin@example.com",
+  internalRole: "super_admin",
+  status: "active",
+  mfaEnrolled: false,
+};
 
 describe("AdminReportFulfillmentService", () => {
   let service: AdminReportFulfillmentService;
@@ -17,6 +27,7 @@ describe("AdminReportFulfillmentService", () => {
     },
   };
   const reportGenerationMock = { runGeneration: jest.fn() };
+  const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -25,6 +36,7 @@ describe("AdminReportFulfillmentService", () => {
         AdminReportFulfillmentService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: ReportGenerationService, useValue: reportGenerationMock },
+        { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
     service = moduleRef.get(AdminReportFulfillmentService);
@@ -63,25 +75,37 @@ describe("AdminReportFulfillmentService", () => {
     it("rejects with 404 when the order doesn't exist", async () => {
       prismaMock.reportOrder.findUnique.mockResolvedValue(null);
 
-      await expect(service.retryOrder("missing-id")).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.retryOrder("missing-id", ADMIN)).rejects.toBeInstanceOf(NotFoundException);
       expect(reportGenerationMock.runGeneration).not.toHaveBeenCalled();
+      expect(auditLogMock.record).not.toHaveBeenCalled();
     });
 
     it("rejects with 409 when the order isn't currently 'failed' (e.g. already delivered)", async () => {
       prismaMock.reportOrder.findUnique.mockResolvedValue({ status: "delivered" });
 
-      await expect(service.retryOrder("order-1")).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.retryOrder("order-1", ADMIN)).rejects.toBeInstanceOf(ConflictException);
       expect(reportGenerationMock.runGeneration).not.toHaveBeenCalled();
+      expect(auditLogMock.record).not.toHaveBeenCalled();
     });
 
-    it("calls runGeneration and returns the resulting status for a 'failed' order", async () => {
+    it("calls runGeneration, records an audit entry, and returns the resulting status for a 'failed' order", async () => {
       prismaMock.reportOrder.findUnique.mockResolvedValue({ status: "failed" });
       prismaMock.reportOrder.findUniqueOrThrow.mockResolvedValue({ status: "delivered" });
 
-      const result = await service.retryOrder("order-1");
+      const result = await service.retryOrder("order-1", ADMIN);
 
       expect(reportGenerationMock.runGeneration).toHaveBeenCalledWith("order-1");
       expect(result).toEqual({ id: "order-1", status: "delivered" });
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "fulfillment.retry",
+          targetType: "report_order",
+          targetId: "order-1",
+          metadata: { previousStatus: "failed", resultStatus: "delivered" },
+        }),
+      );
     });
   });
 });

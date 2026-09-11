@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import * as bcrypt from "bcryptjs";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { AuditLogService } from "../../common/audit/audit-log.service";
 import { TokenService } from "../tokens/token.service";
 import { AdminAuthService } from "./admin-auth.service";
 import { MfaRequiredException } from "./mfa-required.exception";
@@ -45,6 +46,8 @@ describe("AdminAuthService", () => {
     },
   };
 
+  const auditLogMock = { record: jest.fn() };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     const moduleRef = await Test.createTestingModule({
@@ -54,6 +57,7 @@ describe("AdminAuthService", () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: ConfigService, useValue: new ConfigService(TEST_CONFIG) },
         { provide: MfaService, useValue: { verifyCode, generateCandidateSecret, buildEnrollmentUri } },
+        { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
     service = moduleRef.get(AdminAuthService);
@@ -70,6 +74,9 @@ describe("AdminAuthService", () => {
       expect(result.adminUser.mfaEnrolled).toBe(false);
       expect(verifyCode).not.toHaveBeenCalled();
       expect(result.accessToken).toEqual(expect.any(String));
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({ actorId: "admin-1", actorEmail: admin.email, action: "admin.login.success" }),
+      );
     });
   });
 
@@ -121,6 +128,14 @@ describe("AdminAuthService", () => {
         UnauthorizedException,
       );
       expect(verifyCode).not.toHaveBeenCalled();
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: admin.email,
+          action: "admin.login.failed",
+          metadata: expect.objectContaining({ reason: "invalid_password" }),
+        }),
+      );
     });
 
     it("rejects a suspended admin account even with correct password", async () => {
@@ -128,6 +143,24 @@ describe("AdminAuthService", () => {
       prismaMock.adminUser.findUnique.mockResolvedValue(admin);
       await expect(service.login({ email: admin.email, password: "super-secret-admin-pw" }, {})).rejects.toThrow(
         "Account is not active",
+      );
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "admin.login.failed", metadata: expect.objectContaining({ reason: "account_inactive" }) }),
+      );
+    });
+
+    it("rejects an unrecognized email with actorId null (no admin_users row to reference)", async () => {
+      prismaMock.adminUser.findUnique.mockResolvedValue(null);
+      await expect(service.login({ email: "nobody@example.com", password: "whatever" }, {})).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: null,
+          actorEmail: "nobody@example.com",
+          action: "admin.login.failed",
+          metadata: expect.objectContaining({ reason: "unknown_email" }),
+        }),
       );
     });
   });

@@ -158,6 +158,7 @@ model AdminUser {
 
   reviewedPermissions RolePermission[]    @relation("RolePermissionUpdatedBy")
   refreshTokens       AdminRefreshToken[]
+  auditLogEntries     AuditLogEntry[]
 
   @@map("admin_users")
 }
@@ -189,6 +190,48 @@ model RolePermission {
   @@unique([role, permissionKey])
   @@index([permissionKey])
   @@map("role_permissions")
+}
+
+// ---------------------------------------------------------------------------
+// Admin audit log
+// ---------------------------------------------------------------------------
+//
+// General-purpose audit trail, distinct from RolePermission.updatedById
+// above (which only covers one specific table's edits). Added alongside
+// the admin-audit module (apps/api/src/admin-audit) — its first two real
+// writers are admin login attempts (success and failure, including a
+// failed attempt against an email with no matching admin_users row, hence
+// actorId being nullable) and the Report Fulfillment retry action. Not a
+// blanket "log every mutation" system yet — write calls are added
+// deliberately at each real admin action as it's built, not retrofitted
+// everywhere speculatively.
+model AuditLogEntry {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Nullable + a separately-stored actorEmail (not just a FK) because a
+  // failed login against an unrecognized email has no admin_users row to
+  // reference at all, and a real admin's own row surviving account
+  // deletion isn't something this table should depend on either.
+  actorId    String?    @map("actor_id") @db.Uuid
+  actor      AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  actorEmail String?    @map("actor_email")
+
+  // Free-string action key (e.g. "admin.login.success", "fulfillment.retry"),
+  // matching RolePermission.permissionKey's precedent of a free string over
+  // an enum — new action types shouldn't need a migration to add.
+  action String
+
+  targetType String? @map("target_type")
+  targetId   String? @map("target_id")
+
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([action])
+  @@map("audit_log_entries")
 }
 
 // ---------------------------------------------------------------------------

@@ -8,10 +8,12 @@ import { AiAnalysisModule } from "./ai-analysis/ai-analysis.module";
 import { WatchlistModule } from "./watchlist/watchlist.module";
 import { SavedSearchesModule } from "./saved-searches/saved-searches.module";
 import { AnthropicModule } from "./common/anthropic/anthropic.module";
+import { AuditLogModule } from "./common/audit/audit-log.module";
 import { MonetizationModule } from "./monetization/monetization.module";
 import { AdminBillingModule } from "./admin-billing/admin-billing.module";
 import { AdminReportFulfillmentModule } from "./admin-report-fulfillment/admin-report-fulfillment.module";
 import { AdminRevenueModule } from "./admin-revenue/admin-revenue.module";
+import { AdminAuditModule } from "./admin-audit/admin-audit.module";
 
 /**
  * Root application module.
@@ -26,6 +28,7 @@ import { AdminRevenueModule } from "./admin-revenue/admin-revenue.module";
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     AnthropicModule,
+    AuditLogModule,
     IdentityAccessModule,
     PropertiesModule,
     AiAnalysisModule,
@@ -35,6 +38,7 @@ import { AdminRevenueModule } from "./admin-revenue/admin-revenue.module";
     AdminBillingModule,
     AdminReportFulfillmentModule,
     AdminRevenueModule,
+    AdminAuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

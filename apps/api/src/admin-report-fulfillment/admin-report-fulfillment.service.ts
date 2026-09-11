@@ -1,5 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../common/prisma/prisma.service";
+import { AuditLogService } from "../common/audit/audit-log.service";
+import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { ReportGenerationService } from "../monetization/report-generation.service";
 import { ListAdminFulfillmentOrdersQuery } from "./dto/list-fulfillment-orders.query";
 import {
@@ -27,6 +29,7 @@ export class AdminReportFulfillmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly reportGeneration: ReportGenerationService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async getSummary(): Promise<AdminFulfillmentSummaryDto> {
@@ -127,7 +130,7 @@ export class AdminReportFulfillmentService {
    * would silently overwrite real content, and every other status is
    * mid-flight already.
    */
-  async retryOrder(id: string): Promise<RetryFulfillmentResponseDto> {
+  async retryOrder(id: string, admin: AuthenticatedAdminUser): Promise<RetryFulfillmentResponseDto> {
     const order = await this.prisma.reportOrder.findUnique({ where: { id }, select: { status: true } });
     if (!order) {
       throw new NotFoundException(`Report order ${id} not found`);
@@ -139,6 +142,14 @@ export class AdminReportFulfillmentService {
     await this.reportGeneration.runGeneration(id);
 
     const updated = await this.prisma.reportOrder.findUniqueOrThrow({ where: { id }, select: { status: true } });
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "fulfillment.retry",
+      targetType: "report_order",
+      targetId: id,
+      metadata: { previousStatus: "failed", resultStatus: updated.status },
+    });
     return { id, status: updated.status };
   }
 }

@@ -504,6 +504,16 @@ const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: bo
   { role: "admin", permissionKey: "revenue.read", allowed: true },
   { role: "billing_manager", permissionKey: "revenue.read", allowed: true },
   { role: "readonly_analyst", permissionKey: "revenue.read", allowed: true },
+
+  // `audit.read` (apps/api/src/admin-audit/admin-audit.controller.ts) —
+  // deliberately narrower than billing/revenue.read: only Super Admin,
+  // Admin, and Read-only Analyst, not Billing Manager or Report
+  // Fulfillment Manager. Audit entries include login-failure attempts
+  // (see AuditLogEntry's doc comment), which is security-relevant
+  // visibility beyond those two personas' domain-specific needs.
+  { role: "super_admin", permissionKey: "audit.read", allowed: true },
+  { role: "admin", permissionKey: "audit.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "audit.read", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [
