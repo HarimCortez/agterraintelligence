@@ -9,6 +9,15 @@
         "pnpm run dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "admin-web",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-lc",
+        "pnpm run dev"
+      ],
+      "port": 3100
     }
   ]
 }

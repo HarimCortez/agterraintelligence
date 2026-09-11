@@ -26,6 +26,9 @@ importers:
       '@agterra/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@tanstack/react-query':
+        specifier: ^5.102.8
+        version: 5.102.8(react@18.3.1)
       next:
         specifier: ^14.2.21
         version: 14.2.35(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -35,6 +38,9 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      zustand:
+        specifier: ^4.5.5
+        version: 4.5.7(@types/react@18.3.31)(react@18.3.1)
     devDependencies:
       '@agterra/config':
         specifier: workspace:*

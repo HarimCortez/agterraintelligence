@@ -2,7 +2,7 @@
   "name": "@agterra/admin-web",
   "private": true,
   "version": "0.0.0",
-  "description": "AgTerra Intelligence admin console (Next.js App Router), a separate deployment target per the architecture's admin/investor plane-isolation decision. Phase 0 skeleton — no modules implemented yet.",
+  "description": "AgTerra Intelligence admin console (Next.js App Router), a separate deployment target per the architecture's admin/investor plane-isolation decision. Admin login + a placeholder Overview screen implemented so far.",
   "scripts": {
     "build": "next build",
     "dev": "next dev --port 3100",
@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@agterra/ui": "workspace:*",
+    "@tanstack/react-query": "^5.102.8",
     "next": "^14.2.21",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@agterra/config": "workspace:*",

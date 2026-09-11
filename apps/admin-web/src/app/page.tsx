@@ -1,15 +1,21 @@
+import { RequireAdminAuth } from "@/components/auth/RequireAdminAuth";
+import { OverviewWorkspace } from "@/components/overview/OverviewWorkspace";
+
 /**
- * Phase 0 placeholder route. The 9 admin modules (Admin Console Overview,
- * Billing/Entitlements, Report Fulfillment, etc. per REQUIREMENTS.md Section C)
- * are built in later phases per ARCHITECTURE.md's build sequence — not part
- * of this scaffold. This app is deployed separately from investor-web with
- * its own auth plane (see ARCHITECTURE.md "Authentication / Authorization").
+ * `/` — protected (see `RequireAdminAuth`). First real admin screen: proves
+ * the admin auth plane end-to-end (login, MFA prompt if enrolled, session
+ * persistence, logout) and shows who's logged in. The other 9 admin
+ * modules from REQUIREMENTS.md Section C (Billing/Entitlements, Report
+ * Fulfillment, Data Sources, Support, Content/Data QA, AI Monitoring,
+ * Revenue Analytics, Administration Settings, Audit Logs) are real,
+ * separately-scoped follow-up work — multi-quarter scope per
+ * REQUIREMENTS.md's own estimate, not something to build speculatively
+ * here.
  */
-export default function Home() {
+export default function OverviewPage() {
   return (
-    <main>
-      <h1>AgTerra Intelligence — Admin Console</h1>
-      <p>Phase 0 scaffold. No modules implemented yet.</p>
-    </main>
+    <RequireAdminAuth>
+      <OverviewWorkspace />
+    </RequireAdminAuth>
   );
 }
