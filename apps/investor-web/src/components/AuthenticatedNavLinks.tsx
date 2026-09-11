@@ -40,6 +40,14 @@ export function AuthenticatedNavLinks() {
       >
         Saved Searches
       </Link>
+      <Link
+        href="/account"
+        className={`flex items-center rounded px-sm py-sm text-sm transition-colors hover:bg-white/10 ${
+          pathname === "/account" ? "font-semibold text-nav-text" : "text-nav-text-muted"
+        }`}
+      >
+        Account
+      </Link>
     </>
   );
 }

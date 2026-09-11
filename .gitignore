@@ -48,3 +48,4 @@ yarn-error.log*
 # doesn't belong in AgTerra's repo.
 .agents/
 .claude/skills/
+.env*
