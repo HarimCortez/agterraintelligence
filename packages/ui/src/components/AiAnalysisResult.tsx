@@ -161,7 +161,12 @@ export function AiAnalysisResult({ result, className = "" }: AiAnalysisResultPro
 
       <section aria-label="Conclusion">
         <SectionLabel>Conclusion</SectionLabel>
-        <p className="mt-xs font-serif text-headline-serif font-semibold text-text-primary">
+        {/* Scaled down from text-headline-serif (24px) to text-lg (18px) —
+            the full headline size read as oversized for a multi-sentence
+            conclusion in practice. Keeps font-serif + font-semibold so it
+            still stands out from the sans body text below it, just less
+            aggressively. */}
+        <p className="mt-xs max-w-prose font-serif text-lg font-semibold leading-[1.4] text-text-primary">
           {result.conclusion}
         </p>
       </section>
