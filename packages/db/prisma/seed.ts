@@ -495,6 +495,15 @@ const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: bo
   { role: "super_admin", permissionKey: "fulfillment.retry", allowed: true },
   { role: "admin", permissionKey: "fulfillment.retry", allowed: true },
   { role: "report_fulfillment_manager", permissionKey: "fulfillment.retry", allowed: true },
+
+  // `revenue.read` (apps/api/src/admin-revenue/admin-revenue.controller.ts)
+  // — same four-persona set as billing.read; Revenue Analytics is a
+  // natural extension of billing oversight, not a separate persona of its
+  // own in REQUIREMENTS.md Section 9.4.
+  { role: "super_admin", permissionKey: "revenue.read", allowed: true },
+  { role: "admin", permissionKey: "revenue.read", allowed: true },
+  { role: "billing_manager", permissionKey: "revenue.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "revenue.read", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [

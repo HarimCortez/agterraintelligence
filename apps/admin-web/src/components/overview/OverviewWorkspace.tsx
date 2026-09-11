@@ -30,9 +30,13 @@ export function OverviewWorkspace() {
         and{" "}
         <Link href="/fulfillment" className="text-action-primary underline">
           Report Fulfillment
+        </Link>
+        , and{" "}
+        <Link href="/revenue" className="text-action-primary underline">
+          Revenue Analytics
         </Link>{" "}
         are live. The rest of the admin console — data-source monitoring, support, content/data QA, AI
-        monitoring, revenue analytics, settings, and audit logs — is built in later passes.
+        monitoring, settings, and audit logs — is built in later passes.
       </div>
     </div>
   );

@@ -35,6 +35,11 @@ export function AdminNavLinks() {
           Report Fulfillment
         </Link>
       </li>
+      <li>
+        <Link href="/revenue" className={linkClass(pathname === "/revenue")}>
+          Revenue Analytics
+        </Link>
+      </li>
     </ul>
   );
 }

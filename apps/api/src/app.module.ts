@@ -11,6 +11,7 @@ import { AnthropicModule } from "./common/anthropic/anthropic.module";
 import { MonetizationModule } from "./monetization/monetization.module";
 import { AdminBillingModule } from "./admin-billing/admin-billing.module";
 import { AdminReportFulfillmentModule } from "./admin-report-fulfillment/admin-report-fulfillment.module";
+import { AdminRevenueModule } from "./admin-revenue/admin-revenue.module";
 
 /**
  * Root application module.
@@ -33,6 +34,7 @@ import { AdminReportFulfillmentModule } from "./admin-report-fulfillment/admin-r
     MonetizationModule,
     AdminBillingModule,
     AdminReportFulfillmentModule,
+    AdminRevenueModule,
   ],
   controllers: [AppController],
   providers: [AppService],
