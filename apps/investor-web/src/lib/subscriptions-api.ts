@@ -55,3 +55,17 @@ export async function startSubscriptionCheckout(plan: SubscriptionPlanCode): Pro
   const body = (await res.json()) as { checkoutUrl: string };
   return body.checkoutUrl;
 }
+
+/**
+ * Starts a session for Stripe's hosted Billing Portal — cancel/change plan
+ * and invoice history all happen there, not in custom UI here (see
+ * `subscriptions.service.ts`'s `createBillingPortalSession` doc comment).
+ * 400s if the user has never subscribed (no Stripe customer to manage).
+ */
+export async function startBillingPortalSession(): Promise<string> {
+  const res = await authFetch("/api/v1/subscriptions/billing-portal", { method: "POST" });
+  if (res.status === 401) throw new UnauthorizedError();
+  if (!res.ok) throw new Error(`Failed to open billing portal (HTTP ${res.status})`);
+  const body = (await res.json()) as { portalUrl: string };
+  return body.portalUrl;
+}

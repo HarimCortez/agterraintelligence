@@ -6,7 +6,11 @@ import { AccountContext } from "../common/account-context/account-context";
 import { AuthenticatedInvestorUser } from "../identity-access/investor/investor.types";
 import { SubscriptionsService } from "./subscriptions.service";
 import { CheckoutSubscriptionDto } from "./dto/checkout-subscription.dto";
-import { SubscriptionCheckoutResponseDto, SubscriptionMeDto } from "./dto/monetization-response.dto";
+import {
+  BillingPortalResponseDto,
+  SubscriptionCheckoutResponseDto,
+  SubscriptionMeDto,
+} from "./dto/monetization-response.dto";
 
 /**
  * Subscription plan self-serve endpoints — `/v1/subscriptions/*`. Both
@@ -34,5 +38,11 @@ export class SubscriptionsController {
     // `user` is guaranteed populated here — JwtAuthGuard runs first and
     // throws before this handler if it isn't.
     return this.subscriptionsService.createCheckout(ctx, dto, user!.email);
+  }
+
+  @Post("billing-portal")
+  @HttpCode(HttpStatus.OK)
+  billingPortal(@CurrentAccountContext() ctx: AccountContext): Promise<BillingPortalResponseDto> {
+    return this.subscriptionsService.createBillingPortalSession(ctx);
   }
 }

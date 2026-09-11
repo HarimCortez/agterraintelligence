@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchSubscriptionMe,
   fetchSubscriptionPlans,
+  startBillingPortalSession,
   startSubscriptionCheckout,
   subscriptionMeQueryKey,
   type SubscriptionPlanCode,
@@ -17,10 +18,10 @@ import { useAuthStore } from "@/lib/auth-store";
 /**
  * `/account` — the Stripe Checkout success/cancel redirect destination
  * (`FRONTEND_URL` on the API, see `checkout-urls.ts`) as well as the page
- * for starting a subscription. There's no billing-portal integration yet
- * (a later pass — see `stripe-client.service.ts`), so this only covers
- * viewing current plan status and starting a new subscription checkout,
- * not cancelling/changing an existing one.
+ * for starting a subscription. Cancelling/changing an existing plan and
+ * viewing invoice history both happen in Stripe's hosted Billing Portal
+ * (the "Manage billing" button below), not custom UI here — see
+ * `subscriptions.service.ts`'s `createBillingPortalSession` doc comment.
  *
  * The `?checkout=success|cancelled` query param is set by the API's
  * redirect URLs, not chosen by this page — it's informational only
@@ -69,6 +70,14 @@ export function AccountWorkspace() {
     },
   });
 
+  const billingPortalMutation = useMutation({
+    mutationFn: startBillingPortalSession,
+    onSuccess: (portalUrl) => {
+      window.location.href = portalUrl;
+    },
+    onError: handleUnauthorized,
+  });
+
   return (
     <div className="p-xl">
       <header className="mb-lg">
@@ -94,9 +103,23 @@ export function AccountWorkspace() {
       )}
 
       <section className="mb-xl rounded border border-border-subtle bg-surface p-lg">
-        <h2 className="mb-md text-lg font-semibold text-text-primary">Current plan</h2>
-        {meQuery.isPending && <p className="text-sm text-text-secondary">Loading…</p>}
-        {meQuery.isSuccess && <CurrentPlanSummary me={meQuery.data} />}
+        <div className="flex items-start justify-between gap-md">
+          <div>
+            <h2 className="mb-md text-lg font-semibold text-text-primary">Current plan</h2>
+            {meQuery.isPending && <p className="text-sm text-text-secondary">Loading…</p>}
+            {meQuery.isSuccess && <CurrentPlanSummary me={meQuery.data} />}
+          </div>
+          {meQuery.data?.stripeCustomerId && (
+            <button
+              type="button"
+              disabled={billingPortalMutation.isPending}
+              onClick={() => billingPortalMutation.mutate()}
+              className="shrink-0 rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary hover:bg-workspace-bg disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {billingPortalMutation.isPending ? "Redirecting…" : "Manage billing"}
+            </button>
+          )}
+        </div>
       </section>
 
       <section>

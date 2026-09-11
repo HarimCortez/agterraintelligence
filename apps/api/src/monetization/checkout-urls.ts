@@ -15,3 +15,6 @@ export const SUBSCRIPTION_CHECKOUT_SUCCESS_URL = `${FRONTEND_URL}/account?checko
 export const SUBSCRIPTION_CHECKOUT_CANCEL_URL = `${FRONTEND_URL}/account?checkout=cancelled`;
 export const REPORT_CHECKOUT_SUCCESS_URL = `${FRONTEND_URL}/account?checkout=success`;
 export const REPORT_CHECKOUT_CANCEL_URL = `${FRONTEND_URL}/account?checkout=cancelled`;
+
+/** Where Stripe's hosted Billing Portal sends the user back after they're done. */
+export const BILLING_PORTAL_RETURN_URL = `${FRONTEND_URL}/account`;

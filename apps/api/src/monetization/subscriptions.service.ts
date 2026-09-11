@@ -4,8 +4,16 @@ import { AccountContext } from "../common/account-context/account-context";
 import { StripeClientService } from "./stripe-client.service";
 import { getSubscriptionPlanCatalogEntry } from "./subscription-plans.catalog";
 import { CheckoutSubscriptionDto } from "./dto/checkout-subscription.dto";
-import { SubscriptionCheckoutResponseDto, SubscriptionMeDto } from "./dto/monetization-response.dto";
-import { SUBSCRIPTION_CHECKOUT_CANCEL_URL, SUBSCRIPTION_CHECKOUT_SUCCESS_URL } from "./checkout-urls";
+import {
+  BillingPortalResponseDto,
+  SubscriptionCheckoutResponseDto,
+  SubscriptionMeDto,
+} from "./dto/monetization-response.dto";
+import {
+  BILLING_PORTAL_RETURN_URL,
+  SUBSCRIPTION_CHECKOUT_CANCEL_URL,
+  SUBSCRIPTION_CHECKOUT_SUCCESS_URL,
+} from "./checkout-urls";
 
 @Injectable()
 export class SubscriptionsService {
@@ -91,5 +99,33 @@ export class SubscriptionsService {
     }
 
     return { checkoutUrl: session.url };
+  }
+
+  /**
+   * POST /v1/subscriptions/billing-portal. Creates a session for Stripe's
+   * hosted Billing Portal, which covers cancel/change-plan and invoice
+   * history entirely on Stripe's side — deliberately not building a custom
+   * invoice-list or cancel-confirmation UI here, per Stripe's own
+   * recommended integration pattern for exactly this (see
+   * stripe.com/docs/billing/subscriptions/integrating-customer-portal).
+   * Requires an existing Stripe customer, i.e. at least one prior checkout
+   * — there's nothing to manage otherwise.
+   */
+  async createBillingPortalSession(ctx: AccountContext): Promise<BillingPortalResponseDto> {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { userId: ctx.scopeId },
+    });
+
+    if (!subscription?.stripeCustomerId) {
+      throw new BadRequestException("No billing account yet — subscribe to a plan first.");
+    }
+
+    const stripe = this.stripeClient.getClient();
+    const session = await stripe.billingPortal.sessions.create({
+      customer: subscription.stripeCustomerId,
+      return_url: BILLING_PORTAL_RETURN_URL,
+    });
+
+    return { portalUrl: session.url };
   }
 }

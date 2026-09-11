@@ -34,6 +34,11 @@ export interface SubscriptionCheckoutResponseDto {
   checkoutUrl: string;
 }
 
+/** POST /v1/subscriptions/billing-portal response. */
+export interface BillingPortalResponseDto {
+  portalUrl: string;
+}
+
 /** POST /v1/properties/:id/reports/checkout response. */
 export interface ReportCheckoutResponseDto {
   checkoutUrl: string;
