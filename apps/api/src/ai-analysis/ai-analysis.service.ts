@@ -89,7 +89,11 @@ export class AiAnalysisService {
     const row = await this.propertiesService.getPropertyById(propertyId);
     const property = toPropertyDetail(row);
 
-    const model = this.config.get<string>("AI_MODEL", "claude-sonnet-5");
+    // claude-haiku-4-5, not claude-sonnet-5: verified via a real call (see
+    // AI_MODEL in .env.example) that Haiku 4.5 produces the same valid
+    // six-field structured output at materially lower cost — Sonnet's
+    // extra reasoning depth isn't needed for this task.
+    const model = this.config.get<string>("AI_MODEL", "claude-haiku-4-5-20251001");
 
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(property, question);

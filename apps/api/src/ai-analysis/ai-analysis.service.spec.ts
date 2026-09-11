@@ -186,7 +186,7 @@ describe("AiAnalysisService", () => {
     expect(prismaMock.aiInteraction.create).not.toHaveBeenCalled();
   });
 
-  it("falls back to the claude-sonnet-5 default model when AI_MODEL is unset", async () => {
+  it("falls back to the claude-haiku-4-5 default model when AI_MODEL is unset", async () => {
     propertiesServiceMock.getPropertyById.mockResolvedValue(makeRow());
     createMock.mockResolvedValue(toolUseMessage(VALID_ANALYSIS));
     prismaMock.aiInteraction.create.mockResolvedValue({});
@@ -194,6 +194,6 @@ describe("AiAnalysisService", () => {
 
     await service.askAboutProperty("11111111-1111-1111-1111-111111111111");
 
-    expect(createMock.mock.calls[0][0].model).toBe("claude-sonnet-5");
+    expect(createMock.mock.calls[0][0].model).toBe("claude-haiku-4-5-20251001");
   });
 });
