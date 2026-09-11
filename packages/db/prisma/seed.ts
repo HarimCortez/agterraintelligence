@@ -531,6 +531,28 @@ const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: bo
 
   { role: "super_admin", permissionKey: "ingestion.run", allowed: true },
   { role: "admin", permissionKey: "ingestion.run", allowed: true },
+
+  // `support.read`/`support.respond`/`support.refund`
+  // (apps/api/src/admin-support/admin-support.controller.ts). `.read` and
+  // `.respond` include Support Agent — the persona this whole module
+  // exists for. `.refund` is narrower and excludes Support Agent: it's a
+  // real financial action (a live Stripe refund call), so it's limited to
+  // the same roles who can already see billing data — Billing Manager
+  // included here (not just super_admin/admin, unlike ingestion.run)
+  // because REQUIREMENTS.md explicitly ties refunds to both Support
+  // Center *and* the Billing screen, i.e. the same underlying capability.
+  { role: "super_admin", permissionKey: "support.read", allowed: true },
+  { role: "admin", permissionKey: "support.read", allowed: true },
+  { role: "support_agent", permissionKey: "support.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "support.read", allowed: true },
+
+  { role: "super_admin", permissionKey: "support.respond", allowed: true },
+  { role: "admin", permissionKey: "support.respond", allowed: true },
+  { role: "support_agent", permissionKey: "support.respond", allowed: true },
+
+  { role: "super_admin", permissionKey: "support.refund", allowed: true },
+  { role: "admin", permissionKey: "support.refund", allowed: true },
+  { role: "billing_manager", permissionKey: "support.refund", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [

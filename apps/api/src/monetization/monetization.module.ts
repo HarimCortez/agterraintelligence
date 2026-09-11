@@ -30,7 +30,9 @@ import { StripeWebhookService } from "./stripe-webhook.service";
  *
  * `ReportGenerationService` is exported so `AdminReportFulfillmentModule`
  * can reuse `runGeneration` for its retry action instead of duplicating
- * the fulfillment status machine.
+ * the fulfillment status machine. `StripeClientService` is exported so
+ * `AdminSupportModule` can issue real refunds against a ticket's related
+ * `ReportOrder` without duplicating Stripe client construction.
  */
 @Module({
   imports: [PropertiesModule, TokensModule, InvestorAuthModule],
@@ -49,6 +51,6 @@ import { StripeWebhookService } from "./stripe-webhook.service";
     ReportGenerationService,
     StripeWebhookService,
   ],
-  exports: [ReportGenerationService],
+  exports: [ReportGenerationService, StripeClientService],
 })
 export class MonetizationModule {}

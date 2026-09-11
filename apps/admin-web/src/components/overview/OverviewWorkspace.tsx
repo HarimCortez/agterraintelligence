@@ -39,12 +39,16 @@ export function OverviewWorkspace() {
         <Link href="/audit" className="text-action-primary underline">
           Audit Log
         </Link>
-        , and{" "}
+        ,{" "}
         <Link href="/data-sources" className="text-action-primary underline">
           Data Sources
+        </Link>
+        , and{" "}
+        <Link href="/support" className="text-action-primary underline">
+          Support Center
         </Link>{" "}
-        are live. The rest of the admin console — support, content/data QA, AI monitoring, and settings — is built
-        in later passes.
+        are live. The rest of the admin console — content/data QA, AI monitoring, and settings — is built in later
+        passes.
       </div>
     </div>
   );

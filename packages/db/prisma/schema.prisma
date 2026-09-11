@@ -108,6 +108,8 @@ model User {
   savedSearches   SavedSearch[]
   subscription    Subscription?
   reportOrders    ReportOrder[]
+  supportTickets  SupportTicket[]
+  supportMessages SupportTicketMessage[] @relation("SupportTicketMessageUserSender")
 
   @@index([orgId])
   @@map("users")
@@ -156,9 +158,11 @@ model AdminUser {
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")
 
-  reviewedPermissions RolePermission[]    @relation("RolePermissionUpdatedBy")
-  refreshTokens       AdminRefreshToken[]
-  auditLogEntries     AuditLogEntry[]
+  reviewedPermissions    RolePermission[]       @relation("RolePermissionUpdatedBy")
+  refreshTokens          AdminRefreshToken[]
+  auditLogEntries        AuditLogEntry[]
+  assignedSupportTickets SupportTicket[]        @relation("SupportTicketAssignee")
+  supportMessages        SupportTicketMessage[] @relation("SupportTicketMessageAdminSender")
 
   @@map("admin_users")
 }
@@ -266,7 +270,7 @@ model IngestionRun {
   propertiesChecked Int @default(0) @map("properties_checked")
   flagsCreated      Int @default(0) @map("flags_created")
 
-  errorMessage String? @db.Text @map("error_message")
+  errorMessage String? @map("error_message") @db.Text
 
   @@index([source])
   @@index([startedAt])
@@ -458,12 +462,13 @@ model Property {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  opportunityScore  OpportunityScore?
-  valuation         PropertyValuation?
-  riskFlags         PropertyRiskFlag[]
-  aiInteractions    AiInteraction[]
-  watchlistItems    WatchlistItem[]
-  reportOrders      ReportOrder[]
+  opportunityScore OpportunityScore?
+  valuation        PropertyValuation?
+  riskFlags        PropertyRiskFlag[]
+  aiInteractions   AiInteraction[]
+  watchlistItems   WatchlistItem[]
+  reportOrders     ReportOrder[]
+  supportTickets   SupportTicket[]
 
   @@index([county])
   @@index([state])
@@ -551,7 +556,7 @@ model AiInteraction {
   // Nullable FK to properties — scoped to property context in v1, but allows
   // future context types (report, comparison, portfolio). Other context types
   // will reference different tables (once created), so property_id is nullable.
-  propertyId String?  @map("property_id") @db.Uuid
+  propertyId String?   @map("property_id") @db.Uuid
   property   Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   // Context type (e.g. "property", "report", "comparison", "portfolio").
@@ -618,8 +623,8 @@ model SavedSearch {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @map("user_id") @db.Uuid
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  name      String   // User-supplied label (e.g. "Okeechobee under $1M")
-  criteria  Json     // JSONB: filter criteria shape per GET /v1/properties query params
+  name      String // User-supplied label (e.g. "Okeechobee under $1M")
+  criteria  Json // JSONB: filter criteria shape per GET /v1/properties query params
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -770,9 +775,102 @@ model ReportOrder {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  supportTickets SupportTicket[]
+
   @@index([userId])
   @@index([propertyId])
   @@index([reportTierCode])
   @@index([status])
   @@map("report_orders")
+}
+
+// ---------------------------------------------------------------------------
+// Support Center — real ticketing, per REQUIREMENTS.md Section 10.2/Section
+// 6 ("Support Center — ticket table, detail panel, conversation, internal
+// notes, related orders, user/property profile, support tools") and the
+// Support Agent persona (Section 9.4). No ticketing system or refund
+// capability existed before this pass — `report-generation.service.ts`'s
+// doc comment explicitly deferred refunds as "a future admin/support
+// feature." This is that feature: investors file real tickets from
+// investor-web, admins work them from admin-web, and a ticket tied to a
+// ReportOrder can trigger a real Stripe refund (using the order's already-
+// stored `stripePaymentIntentId`) which flips that order to `refunded` —
+// the enum value already existed, unused, until now.
+// ---------------------------------------------------------------------------
+
+enum SupportTicketStatus {
+  open
+  in_progress
+  resolved
+  closed
+
+  @@map("support_ticket_status")
+}
+
+enum SupportMessageSenderType {
+  user
+  admin
+
+  @@map("support_message_sender_type")
+}
+
+model SupportTicket {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  subject String
+  status  SupportTicketStatus @default(open)
+
+  // Optional context a ticket can be filed against — a billing/report
+  // problem points at the order, a data-quality complaint points at the
+  // property. Both nullable and independent; a ticket can carry neither,
+  // either, or (a report-delivery complaint about a specific property)
+  // both.
+  relatedReportOrderId String?      @map("related_report_order_id") @db.Uuid
+  relatedReportOrder   ReportOrder? @relation(fields: [relatedReportOrderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  relatedPropertyId String?   @map("related_property_id") @db.Uuid
+  relatedProperty   Property? @relation(fields: [relatedPropertyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  assignedAdminId String?    @map("assigned_admin_id") @db.Uuid
+  assignedAdmin   AdminUser? @relation("SupportTicketAssignee", fields: [assignedAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages SupportTicketMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([relatedReportOrderId])
+  @@map("support_tickets")
+}
+
+// A ticket's conversation. `isInternalNote` rows are admin-only annotations
+// (never returned by the investor-facing endpoints) — same table rather
+// than a separate one, since a note is structurally identical to a message,
+// just not user-visible.
+model SupportTicketMessage {
+  id String @id @default(uuid()) @db.Uuid
+
+  ticketId String        @map("ticket_id") @db.Uuid
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  senderType SupportMessageSenderType @map("sender_type")
+
+  senderUserId String? @map("sender_user_id") @db.Uuid
+  senderUser   User?   @relation("SupportTicketMessageUserSender", fields: [senderUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  senderAdminId String?    @map("sender_admin_id") @db.Uuid
+  senderAdmin   AdminUser? @relation("SupportTicketMessageAdminSender", fields: [senderAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  body           String  @db.Text
+  isInternalNote Boolean @default(false) @map("is_internal_note")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@map("support_ticket_messages")
 }

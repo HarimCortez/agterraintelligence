@@ -48,6 +48,14 @@ export function AuthenticatedNavLinks() {
       >
         Account
       </Link>
+      <Link
+        href="/support"
+        className={`flex items-center rounded px-sm py-sm text-sm transition-colors hover:bg-white/10 ${
+          pathname.startsWith("/support") ? "font-semibold text-nav-text" : "text-nav-text-muted"
+        }`}
+      >
+        Support
+      </Link>
     </>
   );
 }

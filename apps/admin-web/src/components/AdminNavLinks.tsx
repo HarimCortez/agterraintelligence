@@ -50,6 +50,11 @@ export function AdminNavLinks() {
           Data Sources
         </Link>
       </li>
+      <li>
+        <Link href="/support" className={linkClass(pathname.startsWith("/support"))}>
+          Support Center
+        </Link>
+      </li>
     </ul>
   );
 }

@@ -15,6 +15,8 @@ import { AdminReportFulfillmentModule } from "./admin-report-fulfillment/admin-r
 import { AdminRevenueModule } from "./admin-revenue/admin-revenue.module";
 import { AdminAuditModule } from "./admin-audit/admin-audit.module";
 import { AdminIngestionModule } from "./admin-ingestion/admin-ingestion.module";
+import { SupportModule } from "./support/support.module";
+import { AdminSupportModule } from "./admin-support/admin-support.module";
 
 /**
  * Root application module.
@@ -41,6 +43,8 @@ import { AdminIngestionModule } from "./admin-ingestion/admin-ingestion.module";
     AdminRevenueModule,
     AdminAuditModule,
     AdminIngestionModule,
+    SupportModule,
+    AdminSupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
