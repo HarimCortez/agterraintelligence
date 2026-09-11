@@ -63,7 +63,7 @@ const VALID_ANALYSIS = {
 describe("AiAnalysisService", () => {
   let service: AiAnalysisService;
   const propertiesServiceMock = { getPropertyById: jest.fn() };
-  const prismaMock = { aiInteraction: { create: jest.fn() } };
+  const prismaMock = { aiInteraction: { create: jest.fn() }, aiCallLog: { create: jest.fn() } };
 
   function makeConfig(overrides: Record<string, string> = {}) {
     return new ConfigService({ AI_MODEL: "claude-sonnet-5", ANTHROPIC_API_KEY: "test-key", ...overrides });

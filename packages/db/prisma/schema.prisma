@@ -874,3 +874,60 @@ model SupportTicketMessage {
   @@index([ticketId])
   @@map("support_ticket_messages")
 }
+
+// ---------------------------------------------------------------------------
+// AI call logging — real success/failure/latency for every Anthropic call
+// ---------------------------------------------------------------------------
+//
+// Added for the AI & Model Monitoring admin module. Before this, only
+// *successful* AI Analyst answers were ever persisted (`AiInteraction`,
+// whose own doc comment explicitly scopes it to "the model answered and
+// here's what it said" — never a placeholder for a failed call). Every
+// failure was only `Logger.error`'d to console, with no queryable
+// history — `ai_analysis.service.ts`'s doc comment flagged this exact
+// gap for follow-up ("add a separate ai_interaction_failures table or a
+// nullable response/status column"). This is that table, logging both
+// outcomes (not just failures) so it also covers real response-time and
+// volume data `ai_interactions` never captured either.
+//
+// Written from the one shared choke point both AI features go through —
+// `AnthropicToolCallerService.callForcedTool` — so instrumenting it once
+// covers the free AI Analyst (`AiAnalysisService`) and purchased-report
+// generation (`ReportGenerationService`) identically, not by threading
+// logging through each caller separately.
+enum AiCallStatus {
+  succeeded
+  failed
+
+  @@map("ai_call_status")
+}
+
+model AiCallLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Small closed set today ("ai_analyst", "report_generation") but kept as
+  // a free string per this schema's established convention for evolving
+  // categorical fields (risk_type, action, permission_key) — a third AI
+  // feature shouldn't need a migration to log here.
+  feature String
+
+  // The caller-supplied `logContext` value (e.g. "property <uuid>",
+  // "report order <uuid>") — human-readable identifier for the activity
+  // feed, not a foreign key (a call can fail before any row it might
+  // reference exists).
+  detail String
+
+  model  String
+  status AiCallStatus
+
+  durationMs   Int     @map("duration_ms")
+  outputTokens Int?    @map("output_tokens")
+  errorMessage String? @map("error_message") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([feature])
+  @@index([createdAt])
+  @@map("ai_call_logs")
+}

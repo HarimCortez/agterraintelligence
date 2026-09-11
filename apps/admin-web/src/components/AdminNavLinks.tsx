@@ -60,6 +60,11 @@ export function AdminNavLinks() {
           Content &amp; Data Quality
         </Link>
       </li>
+      <li>
+        <Link href="/ai-monitoring" className={linkClass(pathname.startsWith("/ai-monitoring"))}>
+          AI &amp; Model Monitoring
+        </Link>
+      </li>
     </ul>
   );
 }

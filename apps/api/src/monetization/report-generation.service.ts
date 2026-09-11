@@ -118,6 +118,7 @@ export class ReportGenerationService {
       userPrompt,
       tool: SUBMIT_ANALYSIS_TOOL,
       toolName: SUBMIT_ANALYSIS_TOOL_NAME,
+      feature: "report_generation",
       logContext,
     });
 

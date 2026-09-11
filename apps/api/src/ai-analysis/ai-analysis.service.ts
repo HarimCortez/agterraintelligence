@@ -104,6 +104,7 @@ export class AiAnalysisService {
       userPrompt,
       tool: SUBMIT_ANALYSIS_TOOL,
       toolName: SUBMIT_ANALYSIS_TOOL_NAME,
+      feature: "ai_analyst",
       logContext: `property ${propertyId}`,
     });
 

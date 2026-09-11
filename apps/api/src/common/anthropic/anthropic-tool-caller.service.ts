@@ -1,6 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Anthropic from "@anthropic-ai/sdk";
+import { PrismaService } from "../prisma/prisma.service";
 
 export interface ForcedToolCallParams {
   model: string;
@@ -10,9 +11,18 @@ export interface ForcedToolCallParams {
   tool: Anthropic.Tool;
   toolName: string;
   /**
-   * Free-text identifier included in log lines to say what this call was
-   * for (e.g. `property <id>` or `report order <id>`) — callers own the
-   * wording since only they know what identifies their own unit of work.
+   * Small closed set identifying which AI feature this call is for (e.g.
+   * "ai_analyst", "report_generation") — written to `ai_call_logs.feature`
+   * so AI & Model Monitoring can break down volume/success-rate per
+   * feature. Free string, not an enum, matching this codebase's existing
+   * convention for evolving categorical fields.
+   */
+  feature: string;
+  /**
+   * Free-text identifier included in log lines (and `ai_call_logs.detail`)
+   * to say what this call was for (e.g. `property <id>` or `report order
+   * <id>`) — callers own the wording since only they know what identifies
+   * their own unit of work.
    */
   logContext: string;
 }
@@ -62,10 +72,21 @@ export interface ForcedToolCallResult {
 export class AnthropicToolCallerService {
   private readonly logger = new Logger(AnthropicToolCallerService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async callForcedTool(params: ForcedToolCallParams): Promise<ForcedToolCallResult> {
-    const client = this.getClient();
+    const startedAt = Date.now();
+
+    let client: Anthropic;
+    try {
+      client = this.getClient();
+    } catch (error) {
+      await this.logCall(params, Date.now() - startedAt, "failed", undefined, "AI generation is not configured");
+      throw error;
+    }
 
     let message: Anthropic.Message;
     try {
@@ -78,9 +99,9 @@ export class AnthropicToolCallerService {
         tool_choice: { type: "tool", name: params.toolName },
       });
     } catch (error) {
-      this.logger.error(
-        `Anthropic API call failed for ${params.logContext}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      const detail = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Anthropic API call failed for ${params.logContext}: ${detail}`);
+      await this.logCall(params, Date.now() - startedAt, "failed", undefined, detail);
       throw new ServiceUnavailableException(
         "AI generation is temporarily unavailable. Please try again shortly.",
       );
@@ -92,19 +113,50 @@ export class AnthropicToolCallerService {
     );
 
     if (!toolUseBlock) {
-      this.logger.error(
-        `Anthropic response for ${params.logContext} contained no ${params.toolName} tool_use block (stop_reason=${message.stop_reason})`,
-      );
+      const detail = `No ${params.toolName} tool_use block returned (stop_reason=${message.stop_reason})`;
+      this.logger.error(`Anthropic response for ${params.logContext} contained no ${params.toolName} tool_use block (stop_reason=${message.stop_reason})`);
+      await this.logCall(params, Date.now() - startedAt, "failed", message.usage?.output_tokens, detail);
       throw new ServiceUnavailableException(
         "AI generation could not produce a valid result. Please try again shortly.",
       );
     }
+
+    await this.logCall(params, Date.now() - startedAt, "succeeded", message.usage?.output_tokens, null);
 
     return {
       input: toolUseBlock.input,
       stopReason: message.stop_reason,
       outputTokens: message.usage?.output_tokens,
     };
+  }
+
+  /**
+   * Fire-and-log-don't-propagate-failure, same pattern as
+   * `AuditLogService.record` — a failure writing the monitoring row must
+   * never break the actual AI feature the caller is waiting on.
+   */
+  private async logCall(
+    params: ForcedToolCallParams,
+    durationMs: number,
+    status: "succeeded" | "failed",
+    outputTokens: number | undefined,
+    errorMessage: string | null,
+  ): Promise<void> {
+    try {
+      await this.prisma.aiCallLog.create({
+        data: {
+          feature: params.feature,
+          detail: params.logContext,
+          model: params.model,
+          status,
+          durationMs,
+          outputTokens: outputTokens ?? null,
+          errorMessage,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to write ai_call_logs entry: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**

@@ -569,6 +569,15 @@ const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: bo
   { role: "super_admin", permissionKey: "data_quality.verify", allowed: true },
   { role: "admin", permissionKey: "data_quality.verify", allowed: true },
   { role: "data_qa_reviewer", permissionKey: "data_quality.verify", allowed: true },
+
+  // `ai_monitoring.read`
+  // (apps/api/src/admin-ai-monitoring/admin-ai-monitoring.controller.ts).
+  // Read-only module — no mutation, so no narrower `.write` permission
+  // exists. Includes AI/Model Monitor, the persona this module exists for.
+  { role: "super_admin", permissionKey: "ai_monitoring.read", allowed: true },
+  { role: "admin", permissionKey: "ai_monitoring.read", allowed: true },
+  { role: "ai_model_monitor", permissionKey: "ai_monitoring.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "ai_monitoring.read", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [
