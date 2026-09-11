@@ -45,6 +45,11 @@ export function AdminNavLinks() {
           Audit Log
         </Link>
       </li>
+      <li>
+        <Link href="/data-sources" className={linkClass(pathname === "/data-sources")}>
+          Data Sources
+        </Link>
+      </li>
     </ul>
   );
 }

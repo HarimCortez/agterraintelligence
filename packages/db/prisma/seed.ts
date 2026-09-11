@@ -514,6 +514,23 @@ const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: bo
   { role: "super_admin", permissionKey: "audit.read", allowed: true },
   { role: "admin", permissionKey: "audit.read", allowed: true },
   { role: "readonly_analyst", permissionKey: "audit.read", allowed: true },
+
+  // `ingestion.read`/`ingestion.run`
+  // (apps/api/src/admin-ingestion/admin-ingestion.controller.ts). `.read`
+  // includes Data QA Reviewer (unlike billing/revenue/audit) since
+  // ingestion output directly feeds their persona's data-quality work.
+  // `.run` is narrower still than fulfillment.retry's set — just
+  // super_admin/admin — since it makes real outbound calls to an
+  // external service and writes real risk-flag data, and there's no
+  // "Ingestion Manager" persona in REQUIREMENTS.md Section 9.4 to grant
+  // it to.
+  { role: "super_admin", permissionKey: "ingestion.read", allowed: true },
+  { role: "admin", permissionKey: "ingestion.read", allowed: true },
+  { role: "data_qa_reviewer", permissionKey: "ingestion.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "ingestion.read", allowed: true },
+
+  { role: "super_admin", permissionKey: "ingestion.run", allowed: true },
+  { role: "admin", permissionKey: "ingestion.run", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [

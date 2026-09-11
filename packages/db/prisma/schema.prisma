@@ -235,6 +235,45 @@ model AuditLogEntry {
 }
 
 // ---------------------------------------------------------------------------
+// Ingestion run history
+// ---------------------------------------------------------------------------
+//
+// Tracks executions of real external-data ingestion jobs — the first
+// (and, as of this table's creation, only) real ingestion job is
+// apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts, which
+// queries FEMA's public National Flood Hazard Layer for each property's
+// coordinates and creates real property_risk_flags rows for properties
+// in a Special Flood Hazard Area. Every property/report/subscription
+// table in this schema is otherwise populated by a one-time seed script
+// (packages/db/prisma/seed.ts) — this is the first table backing a real,
+// re-runnable, external-data-backed operation, not seed data.
+enum IngestionRunStatus {
+  running
+  succeeded
+  failed
+
+  @@map("ingestion_run_status")
+}
+
+model IngestionRun {
+  id     String             @id @default(uuid()) @db.Uuid
+  source String
+  status IngestionRunStatus @default(running)
+
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+
+  propertiesChecked Int @default(0) @map("properties_checked")
+  flagsCreated      Int @default(0) @map("flags_created")
+
+  errorMessage String? @db.Text @map("error_message")
+
+  @@index([source])
+  @@index([startedAt])
+  @@map("ingestion_runs")
+}
+
+// ---------------------------------------------------------------------------
 // Rotating refresh token storage (added by `be` on top of `data`'s original
 // Identity & Access schema, still within Phase 0 / Identity & Access scope)
 // ---------------------------------------------------------------------------
