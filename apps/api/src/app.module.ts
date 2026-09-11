@@ -10,6 +10,7 @@ import { SavedSearchesModule } from "./saved-searches/saved-searches.module";
 import { AnthropicModule } from "./common/anthropic/anthropic.module";
 import { MonetizationModule } from "./monetization/monetization.module";
 import { AdminBillingModule } from "./admin-billing/admin-billing.module";
+import { AdminReportFulfillmentModule } from "./admin-report-fulfillment/admin-report-fulfillment.module";
 
 /**
  * Root application module.
@@ -31,6 +32,7 @@ import { AdminBillingModule } from "./admin-billing/admin-billing.module";
     SavedSearchesModule,
     MonetizationModule,
     AdminBillingModule,
+    AdminReportFulfillmentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

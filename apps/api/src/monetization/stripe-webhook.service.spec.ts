@@ -71,7 +71,7 @@ describe("StripeWebhookService — signature verification", () => {
     user: { update: jest.fn() },
     reportOrder: { update: jest.fn(), updateMany: jest.fn() },
   };
-  const reportGenerationMock = { generateReportContent: jest.fn() };
+  const reportGenerationMock = { generateReportContent: jest.fn(), runGeneration: jest.fn() };
 
   function makeConfig(overrides: Record<string, string> = {}) {
     return {
@@ -204,17 +204,8 @@ describe("StripeWebhookService — signature verification", () => {
     expect(prismaMock.reportOrder.update).not.toHaveBeenCalled();
   });
 
-  it("on report generation failure after successful payment: marks the order failed and does NOT throw or refund", async () => {
+  it("on checkout.session.completed (payment mode) with a valid reportOrderId: runs the idempotency-guarded transition then delegates fulfillment to ReportGenerationService.runGeneration", async () => {
     service = await build(makeConfig());
-    prismaMock.reportOrder.update.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-      Promise.resolve({
-        id: "order-1",
-        propertyId: "prop-1",
-        reportTierCode: "essential",
-        ...data,
-      }),
-    );
-    reportGenerationMock.generateReportContent.mockRejectedValue(new Error("model unavailable"));
 
     const payload = makeCheckoutSessionCompletedEvent({
       mode: "payment",
@@ -226,10 +217,16 @@ describe("StripeWebhookService — signature verification", () => {
     const result = await service.handleWebhook(Buffer.from(payload), signature);
 
     expect(result).toEqual({ received: true });
-    // queued -> generating -> failed: at least the final call must mark `failed`.
-    const statuses = prismaMock.reportOrder.update.mock.calls.map((call) => call[0].data.status);
-    expect(statuses).toContain("failed");
-    expect(statuses[statuses.length - 1]).toBe("failed");
+    expect(prismaMock.reportOrder.updateMany).toHaveBeenCalledWith({
+      where: { id: "order-1", status: "pending_payment" },
+      data: { status: "queued", stripePaymentIntentId: "pi_test_1" },
+    });
+    // The generating -> delivered/failed status machine (including the
+    // "no automatic refund on failure" behavior) now lives entirely in
+    // ReportGenerationService.runGeneration — see its own spec file.
+    // Here we only need to confirm the webhook actually delegates to it.
+    expect(reportGenerationMock.runGeneration).toHaveBeenCalledWith("order-1");
+    expect(prismaMock.reportOrder.update).not.toHaveBeenCalled();
   });
 
   it("on `checkout.session.completed` with payment_status 'unpaid' (delayed-notification payment method): defers fulfillment entirely", async () => {
@@ -247,20 +244,11 @@ describe("StripeWebhookService — signature verification", () => {
     expect(result).toEqual({ received: true });
     expect(prismaMock.reportOrder.updateMany).not.toHaveBeenCalled();
     expect(prismaMock.reportOrder.update).not.toHaveBeenCalled();
-    expect(reportGenerationMock.generateReportContent).not.toHaveBeenCalled();
+    expect(reportGenerationMock.runGeneration).not.toHaveBeenCalled();
   });
 
   it("on `checkout.session.async_payment_succeeded` (payment mode): fulfills the report order same as a direct `completed`", async () => {
     service = await build(makeConfig());
-    prismaMock.reportOrder.update.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-      Promise.resolve({
-        id: "order-async-ok",
-        propertyId: "prop-1",
-        reportTierCode: "essential",
-        ...data,
-      }),
-    );
-    reportGenerationMock.generateReportContent.mockResolvedValue({ summary: "ok" });
 
     const payload = makeCheckoutSessionEvent("checkout.session.async_payment_succeeded", {
       mode: "payment",
@@ -276,9 +264,7 @@ describe("StripeWebhookService — signature verification", () => {
       where: { id: "order-async-ok", status: "pending_payment" },
       data: { status: "queued", stripePaymentIntentId: "pi_test_async_ok" },
     });
-    expect(reportGenerationMock.generateReportContent).toHaveBeenCalledTimes(1);
-    const statuses = prismaMock.reportOrder.update.mock.calls.map((call) => call[0].data.status);
-    expect(statuses[statuses.length - 1]).toBe("delivered");
+    expect(reportGenerationMock.runGeneration).toHaveBeenCalledWith("order-async-ok");
   });
 
   it("on `checkout.session.async_payment_failed` (payment mode): marks a still-pending report order failed via a scoped conditional update", async () => {
@@ -340,15 +326,6 @@ describe("StripeWebhookService — signature verification", () => {
   it("idempotency guard: processing the same report-purchase fulfillment event twice only generates the report once", async () => {
     service = await build(makeConfig());
     prismaMock.reportOrder.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
-    prismaMock.reportOrder.update.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-      Promise.resolve({
-        id: "order-redelivered",
-        propertyId: "prop-1",
-        reportTierCode: "essential",
-        ...data,
-      }),
-    );
-    reportGenerationMock.generateReportContent.mockResolvedValue({ summary: "ok" });
 
     const payload = makeCheckoutSessionCompletedEvent({
       mode: "payment",
@@ -365,7 +342,7 @@ describe("StripeWebhookService — signature verification", () => {
     // First delivery: guard passes (count: 1) -> generation runs once.
     // Second (redelivered) event: guard fails (count: 0, order already past
     // pending_payment) -> generation must NOT run again.
-    expect(reportGenerationMock.generateReportContent).toHaveBeenCalledTimes(1);
+    expect(reportGenerationMock.runGeneration).toHaveBeenCalledTimes(1);
     expect(prismaMock.reportOrder.updateMany).toHaveBeenCalledTimes(2);
   });
 

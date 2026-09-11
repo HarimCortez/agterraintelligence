@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../common/prisma/prisma.service";
 import { PropertiesService } from "../properties/properties.service";
 import { toPropertyDetail } from "../properties/properties.serializers";
 import { AnthropicToolCallerService } from "../common/anthropic/anthropic-tool-caller.service";
@@ -35,23 +36,68 @@ const REPORT_MAX_RESPONSE_TOKENS = 4096;
  * missing-tool_use-block handling is never duplicated between the two
  * features.
  *
- * Deliberately does NOT catch-and-map errors to an HTTP response here: this
- * is called from `StripeWebhookService`, which has no HTTP client waiting
- * on the result — it owns the decision of what to do on failure (mark the
- * `ReportOrder` `failed` and log, never a silent swallow or an automatic
- * refund). Any error (503 from `AnthropicToolCallerService`, or
- * `InvalidAnalysisShapeError` from a malformed tool response) propagates to
- * that caller unchanged.
+ * `generateReportContent` deliberately does NOT catch-and-map errors to an
+ * HTTP response — it's a pure content-generation call. `runGeneration`
+ * below is the stateful wrapper (generating -> delivered/failed) shared by
+ * both real callers: `StripeWebhookService` (first fulfillment attempt
+ * after payment) and `AdminReportFulfillmentService` (an admin retrying a
+ * `failed` order — same content-generation call, same status machine, no
+ * payment involved). Extracted here specifically so that status-transition
+ * logic exists in exactly one place, not duplicated between a webhook
+ * handler and an admin action.
  */
 @Injectable()
 export class ReportGenerationService {
   private readonly logger = new Logger(ReportGenerationService.name);
 
   constructor(
+    private readonly prisma: PrismaService,
     private readonly propertiesService: PropertiesService,
     private readonly anthropicCaller: AnthropicToolCallerService,
     private readonly config: ConfigService,
   ) {}
+
+  /**
+   * Transitions a report order through `generating` -> `delivered` (with
+   * persisted content) or `generating` -> `failed` (logged, no automatic
+   * refund — see the class doc comment on why that's a deliberate
+   * non-decision left for manual/admin follow-up). Callers are responsible
+   * for confirming the order is in a state where (re)generation is valid
+   * (e.g. `StripeWebhookService`'s idempotency guard on first fulfillment,
+   * `AdminReportFulfillmentService`'s `failed`-only check on retry) —
+   * this method itself doesn't gate on prior status, it just runs the
+   * generation attempt and records the outcome.
+   */
+  async runGeneration(orderId: string): Promise<void> {
+    const order = await this.prisma.reportOrder.update({
+      where: { id: orderId },
+      data: { status: "generating" },
+    });
+
+    try {
+      const content = await this.generateReportContent(
+        order.propertyId,
+        order.reportTierCode as ReportTier,
+        `report order ${order.id}`,
+      );
+      await this.prisma.reportOrder.update({
+        where: { id: order.id },
+        data: { status: "delivered", content: { ...content } },
+      });
+    } catch (error) {
+      // Payment has already succeeded at this point (or, on a retry, was
+      // already confirmed on the original attempt). Do NOT attempt an
+      // automatic Stripe refund here — issuing a refund is a real
+      // financial action that should go through an actual review process
+      // (a future admin/support feature), not be triggered silently by an
+      // error path. Flagged explicitly, not swallowed: the order is
+      // marked `failed` and logged at `error` level for manual follow-up.
+      this.logger.error(
+        `Report generation failed for order ${order.id} (property ${order.propertyId}, tier ${order.reportTierCode}) — marking failed, NOT issuing a refund: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      await this.prisma.reportOrder.update({ where: { id: order.id }, data: { status: "failed" } });
+    }
+  }
 
   async generateReportContent(
     propertyId: string,

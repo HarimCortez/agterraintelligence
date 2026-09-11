@@ -27,9 +27,12 @@ export function OverviewWorkspace() {
         <Link href="/billing" className="text-action-primary underline">
           Billing &amp; Entitlements
         </Link>{" "}
-        is live. The rest of the admin console — report fulfillment, data-source monitoring, support,
-        content/data QA, AI monitoring, revenue analytics, settings, and audit logs — is built in later
-        passes.
+        and{" "}
+        <Link href="/fulfillment" className="text-action-primary underline">
+          Report Fulfillment
+        </Link>{" "}
+        are live. The rest of the admin console — data-source monitoring, support, content/data QA, AI
+        monitoring, revenue analytics, settings, and audit logs — is built in later passes.
       </div>
     </div>
   );

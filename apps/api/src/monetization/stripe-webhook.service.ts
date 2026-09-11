@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import Stripe from "stripe";
 import { ExternalRole, SubscriptionPlan, SubscriptionStatus } from "@agterra/db";
 import { PrismaService } from "../common/prisma/prisma.service";
-import { ReportTier } from "../ai-analysis/ai-analysis.prompt";
 import { StripeClientService } from "./stripe-client.service";
 import { ReportGenerationService } from "./report-generation.service";
 
@@ -218,33 +217,11 @@ export class StripeWebhookService {
       return;
     }
 
-    // pending_payment -> queued -> generating, per the fulfillment state
-    // machine (schema.prisma's monetization header comment).
-    const order = await this.prisma.reportOrder.update({ where: { id: reportOrderId }, data: { status: "generating" } });
-
-    try {
-      const content = await this.reportGeneration.generateReportContent(
-        order.propertyId,
-        order.reportTierCode as ReportTier,
-        `report order ${order.id}`,
-      );
-      await this.prisma.reportOrder.update({
-        where: { id: order.id },
-        data: { status: "delivered", content: { ...content } },
-      });
-    } catch (error) {
-      // Payment has already succeeded at this point. Do NOT attempt an
-      // automatic Stripe refund here — issuing a refund is a real
-      // financial action that should go through an actual review process
-      // (a future admin/support feature), not be triggered silently by a
-      // backend error path. This is flagged explicitly, not swallowed: the
-      // order is marked `failed` and logged at `error` level so it's
-      // visible for manual follow-up (refund-or-retry decision).
-      this.logger.error(
-        `Report generation failed for order ${order.id} (property ${order.propertyId}, tier ${order.reportTierCode}) after successful payment — marking failed, NOT issuing a refund: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      await this.prisma.reportOrder.update({ where: { id: order.id }, data: { status: "failed" } });
-    }
+    // pending_payment -> queued -> generating -> delivered/failed. The
+    // generating..terminal-state portion is shared with
+    // AdminReportFulfillmentService's retry action — see
+    // ReportGenerationService.runGeneration's doc comment.
+    await this.reportGeneration.runGeneration(reportOrderId);
   }
 
   private async handleCheckoutSessionAsyncPaymentFailed(session: Stripe.Checkout.Session): Promise<void> {

@@ -30,6 +30,11 @@ export function AdminNavLinks() {
           Billing &amp; Entitlements
         </Link>
       </li>
+      <li>
+        <Link href="/fulfillment" className={linkClass(pathname.startsWith("/fulfillment"))}>
+          Report Fulfillment
+        </Link>
+      </li>
     </ul>
   );
 }

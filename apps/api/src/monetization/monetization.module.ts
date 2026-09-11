@@ -27,6 +27,10 @@ import { StripeWebhookService } from "./stripe-webhook.service";
  * `InvestorAuthModule`/`TokensModule` are imported so `JwtAuthGuard` (and
  * its own `TokenService` dependency) resolve here — same pattern
  * `WatchlistModule`/`SavedSearchesModule` already use.
+ *
+ * `ReportGenerationService` is exported so `AdminReportFulfillmentModule`
+ * can reuse `runGeneration` for its retry action instead of duplicating
+ * the fulfillment status machine.
  */
 @Module({
   imports: [PropertiesModule, TokensModule, InvestorAuthModule],
@@ -45,5 +49,6 @@ import { StripeWebhookService } from "./stripe-webhook.service";
     ReportGenerationService,
     StripeWebhookService,
   ],
+  exports: [ReportGenerationService],
 })
 export class MonetizationModule {}

@@ -474,11 +474,27 @@ interface ReportTierSeed {
 // Monitor are deliberately excluded — their personas don't call for
 // billing visibility, and PermissionsService fails closed on no row, so
 // omitting them is the correct "not allowed" state, not an oversight.
+// `fulfillment.read`/`fulfillment.retry` (apps/api/src/admin-report-
+// fulfillment/admin-report-fulfillment.controller.ts) follow the same
+// fail-closed pattern. `.read` goes to the four personas with fulfillment
+// visibility (Super Admin/Admin broadly, Report Fulfillment Manager
+// explicitly, Read-only Analyst for reporting); `.retry` is narrower —
+// only the three roles that should be able to trigger a real (paid-model)
+// regeneration action, not the read-only persona.
 const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: boolean }[] = [
   { role: "super_admin", permissionKey: "billing.read", allowed: true },
   { role: "admin", permissionKey: "billing.read", allowed: true },
   { role: "billing_manager", permissionKey: "billing.read", allowed: true },
   { role: "readonly_analyst", permissionKey: "billing.read", allowed: true },
+
+  { role: "super_admin", permissionKey: "fulfillment.read", allowed: true },
+  { role: "admin", permissionKey: "fulfillment.read", allowed: true },
+  { role: "report_fulfillment_manager", permissionKey: "fulfillment.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "fulfillment.read", allowed: true },
+
+  { role: "super_admin", permissionKey: "fulfillment.retry", allowed: true },
+  { role: "admin", permissionKey: "fulfillment.retry", allowed: true },
+  { role: "report_fulfillment_manager", permissionKey: "fulfillment.retry", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [
