@@ -17,6 +17,7 @@ import { AdminAuditModule } from "./admin-audit/admin-audit.module";
 import { AdminIngestionModule } from "./admin-ingestion/admin-ingestion.module";
 import { SupportModule } from "./support/support.module";
 import { AdminSupportModule } from "./admin-support/admin-support.module";
+import { AdminDataQualityModule } from "./admin-data-quality/admin-data-quality.module";
 
 /**
  * Root application module.
@@ -45,6 +46,7 @@ import { AdminSupportModule } from "./admin-support/admin-support.module";
     AdminIngestionModule,
     SupportModule,
     AdminSupportModule,
+    AdminDataQualityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

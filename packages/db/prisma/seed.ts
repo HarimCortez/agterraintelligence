@@ -553,6 +553,22 @@ const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: bo
   { role: "super_admin", permissionKey: "support.refund", allowed: true },
   { role: "admin", permissionKey: "support.refund", allowed: true },
   { role: "billing_manager", permissionKey: "support.refund", allowed: true },
+
+  // `data_quality.read`/`data_quality.verify`
+  // (apps/api/src/admin-data-quality/admin-data-quality.controller.ts).
+  // `.read` includes Data QA Reviewer — the persona this module exists
+  // for — plus the same broad-visibility set as ingestion.read.
+  // `.verify` (marking a valuation manually reviewed) excludes
+  // readonly_analyst, matching the read/write split every other module
+  // uses.
+  { role: "super_admin", permissionKey: "data_quality.read", allowed: true },
+  { role: "admin", permissionKey: "data_quality.read", allowed: true },
+  { role: "data_qa_reviewer", permissionKey: "data_quality.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "data_quality.read", allowed: true },
+
+  { role: "super_admin", permissionKey: "data_quality.verify", allowed: true },
+  { role: "admin", permissionKey: "data_quality.verify", allowed: true },
+  { role: "data_qa_reviewer", permissionKey: "data_quality.verify", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [

@@ -43,12 +43,15 @@ export function OverviewWorkspace() {
         <Link href="/data-sources" className="text-action-primary underline">
           Data Sources
         </Link>
-        , and{" "}
+,{" "}
         <Link href="/support" className="text-action-primary underline">
           Support Center
+        </Link>
+        , and{" "}
+        <Link href="/data-quality" className="text-action-primary underline">
+          Content &amp; Data Quality
         </Link>{" "}
-        are live. The rest of the admin console — content/data QA, AI monitoring, and settings — is built in later
-        passes.
+        are live. The rest of the admin console — AI monitoring and settings — is built in later passes.
       </div>
     </div>
   );

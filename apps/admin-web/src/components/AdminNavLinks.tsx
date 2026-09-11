@@ -55,6 +55,11 @@ export function AdminNavLinks() {
           Support Center
         </Link>
       </li>
+      <li>
+        <Link href="/data-quality" className={linkClass(pathname.startsWith("/data-quality"))}>
+          Content &amp; Data Quality
+        </Link>
+      </li>
     </ul>
   );
 }
