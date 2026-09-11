@@ -9,6 +9,7 @@ import { WatchlistModule } from "./watchlist/watchlist.module";
 import { SavedSearchesModule } from "./saved-searches/saved-searches.module";
 import { AnthropicModule } from "./common/anthropic/anthropic.module";
 import { MonetizationModule } from "./monetization/monetization.module";
+import { AdminBillingModule } from "./admin-billing/admin-billing.module";
 
 /**
  * Root application module.
@@ -29,6 +30,7 @@ import { MonetizationModule } from "./monetization/monetization.module";
     WatchlistModule,
     SavedSearchesModule,
     MonetizationModule,
+    AdminBillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

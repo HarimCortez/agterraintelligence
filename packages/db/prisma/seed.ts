@@ -16,7 +16,7 @@
  * Unsupported-type note) — property rows are inserted via `$executeRaw`
  * using `ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography`.
  */
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, InternalRole } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -463,6 +463,24 @@ interface ReportTierSeed {
   sortOrder: number;
 }
 
+// Internal RBAC policy rows (schema.prisma's RolePermission header comment:
+// "check role_permissions there instead of branching on role in code").
+// `billing.read` is the first permission key this table actually gates
+// (apps/api/src/admin-billing/admin-billing.controller.ts) — granted to
+// the four personas whose REQUIREMENTS.md Section 9.4 descriptions involve
+// billing/monetization visibility (Super Admin/Admin broadly; Billing
+// Manager explicitly; Read-only Analyst for reporting access). Support
+// Agent, Data QA Reviewer, Report Fulfillment Manager, and AI/Model
+// Monitor are deliberately excluded — their personas don't call for
+// billing visibility, and PermissionsService fails closed on no row, so
+// omitting them is the correct "not allowed" state, not an oversight.
+const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: boolean }[] = [
+  { role: "super_admin", permissionKey: "billing.read", allowed: true },
+  { role: "admin", permissionKey: "billing.read", allowed: true },
+  { role: "billing_manager", permissionKey: "billing.read", allowed: true },
+  { role: "readonly_analyst", permissionKey: "billing.read", allowed: true },
+];
+
 const REPORT_TIERS: ReportTierSeed[] = [
   {
     code: "essential",
@@ -578,6 +596,18 @@ async function main() {
 
   const reportTierCount = await prisma.reportTier.count();
   console.log(`Seeded ${reportTierCount} report tiers.`);
+
+  // Role permissions: policy config, upserted (not deleted) for the same
+  // re-run-safety reason as report tiers above.
+  for (const rp of ROLE_PERMISSIONS) {
+    await prisma.rolePermission.upsert({
+      where: { role_permissionKey: { role: rp.role, permissionKey: rp.permissionKey } },
+      create: rp,
+      update: { allowed: rp.allowed },
+    });
+  }
+
+  console.log(`Seeded ${ROLE_PERMISSIONS.length} role_permissions rows.`);
 }
 
 main()

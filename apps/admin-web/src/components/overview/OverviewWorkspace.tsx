@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAdminAuthStore } from "@/lib/admin-auth-store";
 
 /**
@@ -23,9 +24,12 @@ export function OverviewWorkspace() {
       </header>
 
       <div className="rounded border border-border-subtle bg-surface p-lg text-sm text-text-secondary">
-        The rest of the admin console — billing/entitlements, report fulfillment, data-source monitoring,
-        support, content/data QA, AI monitoring, revenue analytics, settings, and audit logs — is built in
-        later passes.
+        <Link href="/billing" className="text-action-primary underline">
+          Billing &amp; Entitlements
+        </Link>{" "}
+        is live. The rest of the admin console — report fulfillment, data-source monitoring, support,
+        content/data QA, AI monitoring, revenue analytics, settings, and audit logs — is built in later
+        passes.
       </div>
     </div>
   );

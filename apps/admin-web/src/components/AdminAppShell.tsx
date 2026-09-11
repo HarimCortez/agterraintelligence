@@ -1,31 +1,27 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
 import { AppNavRail } from "@agterra/ui";
 import { useAdminAuthStore } from "@/lib/admin-auth-store";
+import { AdminNavLinks } from "./AdminNavLinks";
 import { AdminAuthNavSection } from "./AdminAuthNavSection";
 
 /**
- * Admin console shell — mirrors investor-web's `AppShell.tsx`. Only
- * "Overview" exists as a real route so far; the other 8 admin modules
- * (Billing/Entitlements, Report Fulfillment, Data Sources, Support,
- * Content/Data QA, AI Monitoring, Revenue Analytics, Administration
- * Settings — see REQUIREMENTS.md Section C) aren't built yet, so `items`
- * isn't pre-populated with routes that don't exist.
+ * Admin console shell — mirrors investor-web's `AppShell.tsx`. "Overview"
+ * and "Billing & Entitlements" are the two real routes so far; the other 7
+ * admin modules (Report Fulfillment, Data Sources, Support, Content/Data
+ * QA, AI Monitoring, Revenue Analytics, Administration Settings — see
+ * REQUIREMENTS.md Section C) aren't built yet.
  */
 export function AdminAppShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-
   useEffect(() => {
     void useAdminAuthStore.persist.rehydrate();
   }, []);
 
-  const items = [{ label: "Overview", active: pathname === "/" }];
-
   return (
     <div className="flex min-h-screen bg-workspace-bg">
-      <AppNavRail items={items}>
+      <AppNavRail items={[]}>
+        <AdminNavLinks />
         <AdminAuthNavSection />
       </AppNavRail>
 
