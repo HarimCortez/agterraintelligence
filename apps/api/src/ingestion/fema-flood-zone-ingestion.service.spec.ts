@@ -26,7 +26,7 @@ describe("FemaFloodZoneIngestionService", () => {
 
     prismaMock.ingestionRun.create.mockResolvedValue({ id: "run-1" });
     prismaMock.ingestionRun.update.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
-      Promise.resolve({ id: "run-1", propertiesChecked: 0, flagsCreated: 0, ...data }),
+      Promise.resolve({ id: "run-1", itemsProcessed: 0, recordsCreated: 0, ...data }),
     );
   });
 
@@ -38,7 +38,7 @@ describe("FemaFloodZoneIngestionService", () => {
 
     expect(femaClientMock.queryPoint).not.toHaveBeenCalled();
     expect(prismaMock.propertyRiskFlag.create).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ status: "succeeded", propertiesChecked: 1, flagsCreated: 0 });
+    expect(result).toMatchObject({ status: "succeeded", itemsProcessed: 1, recordsCreated: 0 });
   });
 
   it("creates a flood_zone flag only when FEMA reports a Special Flood Hazard Area hit", async () => {
@@ -61,7 +61,7 @@ describe("FemaFloodZoneIngestionService", () => {
         data: expect.objectContaining({ propertyId: "prop-1", riskType: "flood_zone", severity: "high" }),
       }),
     );
-    expect(result).toMatchObject({ status: "succeeded", propertiesChecked: 2, flagsCreated: 1 });
+    expect(result).toMatchObject({ status: "succeeded", itemsProcessed: 2, recordsCreated: 1 });
   });
 
   it("does not create a flag when FEMA returns null (no feature / request failure) for a point", async () => {
@@ -72,7 +72,7 @@ describe("FemaFloodZoneIngestionService", () => {
     const result = await service.run();
 
     expect(prismaMock.propertyRiskFlag.create).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ status: "succeeded", flagsCreated: 0 });
+    expect(result).toMatchObject({ status: "succeeded", recordsCreated: 0 });
   });
 
   it("marks the run failed (not throwing) and records the error message when an unexpected error occurs", async () => {

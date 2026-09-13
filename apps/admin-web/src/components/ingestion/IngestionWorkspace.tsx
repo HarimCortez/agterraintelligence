@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { adminIngestionRunsQueryKey, fetchAdminIngestionRuns, triggerFemaFloodZoneRun } from "@/lib/admin-ingestion-api";
+import {
+  adminIngestionRunsQueryKey,
+  adminParcelRecordsQueryKey,
+  fetchAdminIngestionRuns,
+  fetchAdminParcelRecords,
+  triggerFemaFloodZoneRun,
+  triggerFlParcelRun,
+} from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
 import { ForbiddenError } from "@/lib/admin-api-errors";
@@ -13,14 +20,17 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the one real ingestion job that exists: FEMA
- * flood zone data. See `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`'s
- * doc comment for why this is manually triggered rather than scheduled.
+ * admin manually trigger, the two real ingestion jobs that exist: FEMA
+ * flood zone data and the FL DOR parcel cadastral sweep. See
+ * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts` and
+ * `apps/api/src/ingestion/fl-parcel-cadastral-ingestion.service.ts`'s doc
+ * comments for why both are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
   const queryClient = useQueryClient();
   const [offset, setOffset] = useState(0);
+  const [parcelOffset, setParcelOffset] = useState(0);
 
   const params = { limit: PAGE_SIZE, offset };
   const query = useQuery({
@@ -34,16 +44,37 @@ export function IngestionWorkspace() {
     refetchInterval: (q) => (q.state.data?.results.some((run) => run.status === "running") ? 2000 : false),
   });
 
+  const parcelParams = { limit: PAGE_SIZE, offset: parcelOffset };
+  const parcelQuery = useQuery({
+    queryKey: adminParcelRecordsQueryKey(parcelParams),
+    queryFn: () => fetchAdminParcelRecords(parcelParams),
+  });
+
   useEffect(() => {
     if (query.error) handleUnauthorized(query.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.error]);
 
-  const triggerMutation = useMutation({
+  useEffect(() => {
+    if (parcelQuery.error) handleUnauthorized(parcelQuery.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parcelQuery.error]);
+
+  const triggerFemaMutation = useMutation({
     mutationFn: () => triggerFemaFloodZoneRun(),
     onSuccess: () => {
       setOffset(0);
       void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
+  const triggerParcelMutation = useMutation({
+    mutationFn: () => triggerFlParcelRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "parcels"] });
     },
     onError: handleUnauthorized,
   });
@@ -66,26 +97,40 @@ export function IngestionWorkspace() {
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Data Sources &amp; Ingestion</h1>
           <p className="text-sm text-text-secondary">
-            FEMA National Flood Hazard Layer — real, manually-triggered ingestion runs. No other data sources have a
-            live ingestion pipeline yet.
+            FEMA National Flood Hazard Layer and the Florida DOR parcel cadastral sweep — real, manually-triggered
+            ingestion runs. No other data sources have a live ingestion pipeline yet.
           </p>
         </div>
-        <button
-          type="button"
-          disabled={triggerMutation.isPending || runInProgress}
-          onClick={() => triggerMutation.mutate()}
-          className="whitespace-nowrap rounded bg-action-primary px-md py-sm text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {triggerMutation.isPending || runInProgress ? "Running…" : "Run FEMA Flood Zone Sync"}
-        </button>
+        <div className="flex shrink-0 gap-sm">
+          <button
+            type="button"
+            disabled={triggerFemaMutation.isPending || runInProgress}
+            onClick={() => triggerFemaMutation.mutate()}
+            className="whitespace-nowrap rounded bg-action-primary px-md py-sm text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerFemaMutation.isPending || runInProgress ? "Running…" : "Run FEMA Flood Zone Sync"}
+          </button>
+          <button
+            type="button"
+            disabled={triggerParcelMutation.isPending || runInProgress}
+            onClick={() => triggerParcelMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerParcelMutation.isPending || runInProgress ? "Running…" : "Run FL Parcel Sync"}
+          </button>
+        </div>
       </header>
 
-      {triggerMutation.isError && !(triggerMutation.error instanceof ForbiddenError) && (
-        <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
-          {triggerMutation.error instanceof Error ? triggerMutation.error.message : "Failed to trigger the run."}
-        </div>
+      {[triggerFemaMutation, triggerParcelMutation].map(
+        (mutation, i) =>
+          mutation.isError &&
+          !(mutation.error instanceof ForbiddenError) && (
+            <div key={i} className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
+              {mutation.error instanceof Error ? mutation.error.message : "Failed to trigger the run."}
+            </div>
+          ),
       )}
-      {triggerMutation.isSuccess && (
+      {(triggerFemaMutation.isSuccess || triggerParcelMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>
@@ -98,8 +143,8 @@ export function IngestionWorkspace() {
               <th className="px-md py-sm">Started</th>
               <th className="px-md py-sm">Source</th>
               <th className="px-md py-sm">Status</th>
-              <th className="px-md py-sm">Properties checked</th>
-              <th className="px-md py-sm">Flags created</th>
+              <th className="px-md py-sm">Items processed</th>
+              <th className="px-md py-sm">Records created</th>
               <th className="px-md py-sm">Error</th>
             </tr>
           </thead>
@@ -126,8 +171,8 @@ export function IngestionWorkspace() {
                   </td>
                   <td className="px-md py-sm text-text-primary">{run.source}</td>
                   <td className="px-md py-sm capitalize text-text-primary">{formatEnumLabel(run.status)}</td>
-                  <td className="px-md py-sm text-text-primary">{run.propertiesChecked}</td>
-                  <td className="px-md py-sm text-text-primary">{run.flagsCreated}</td>
+                  <td className="px-md py-sm text-text-primary">{run.itemsProcessed}</td>
+                  <td className="px-md py-sm text-text-primary">{run.recordsCreated}</td>
                   <td className="max-w-[320px] truncate px-md py-sm text-xs text-text-secondary" title={run.errorMessage ?? undefined}>
                     {run.errorMessage ?? "—"}
                   </td>
@@ -155,6 +200,85 @@ export function IngestionWorkspace() {
               type="button"
               disabled={offset + PAGE_SIZE >= query.data!.total}
               onClick={() => setOffset(offset + PAGE_SIZE)}
+              className="rounded border border-border-default px-sm py-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      <h2 className="mb-sm mt-2xl text-lg font-semibold text-text-primary">Ingested Parcels</h2>
+      <p className="mb-md text-sm text-text-secondary">
+        Real agricultural parcels from the FL DOR cadastral sweep (DeSoto, Hardee, Highlands, Polk — Okeechobee not
+        yet covered, see the ingestion service&apos;s doc comment). Tax-assessed values, not market appraisals.
+      </p>
+
+      <div className="overflow-x-auto rounded border border-border-subtle bg-surface">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border-subtle text-left text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+              <th className="px-md py-sm">County</th>
+              <th className="px-md py-sm">Parcel ID</th>
+              <th className="px-md py-sm">Owner</th>
+              <th className="px-md py-sm">Use</th>
+              <th className="px-md py-sm">Acreage</th>
+              <th className="px-md py-sm">Assessed value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {parcelQuery.isPending && (
+              <tr>
+                <td className="px-md py-md text-text-secondary" colSpan={6}>
+                  Loading…
+                </td>
+              </tr>
+            )}
+            {parcelQuery.isSuccess && parcelQuery.data.results.length === 0 && (
+              <tr>
+                <td className="px-md py-md text-text-secondary" colSpan={6}>
+                  No parcels ingested yet — run the FL Parcel Sync above.
+                </td>
+              </tr>
+            )}
+            {parcelQuery.isSuccess &&
+              parcelQuery.data.results.map((parcel) => (
+                <tr key={parcel.id} className="border-b border-border-subtle last:border-b-0 align-top">
+                  <td className="whitespace-nowrap px-md py-sm text-text-primary">{parcel.county}</td>
+                  <td className="px-md py-sm text-text-secondary">{parcel.parcelId}</td>
+                  <td className="px-md py-sm text-text-primary">{parcel.ownerName ?? "—"}</td>
+                  <td className="px-md py-sm text-text-primary" title={parcel.dorUseDescription}>
+                    {parcel.dorUseDescription}
+                  </td>
+                  <td className="px-md py-sm text-text-primary">{parcel.acreage}</td>
+                  <td className="px-md py-sm text-text-primary">
+                    {(parcel.justValueCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+
+      {(parcelQuery.data?.total ?? 0) > 0 && (
+        <div className="mt-sm flex items-center justify-between text-sm text-text-secondary">
+          <span>
+            {parcelOffset + 1}–{Math.min(parcelOffset + PAGE_SIZE, parcelQuery.data!.total)} of{" "}
+            {parcelQuery.data!.total}
+          </span>
+          <div className="flex gap-sm">
+            <button
+              type="button"
+              disabled={parcelOffset === 0}
+              onClick={() => setParcelOffset(Math.max(0, parcelOffset - PAGE_SIZE))}
+              className="rounded border border-border-default px-sm py-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={parcelOffset + PAGE_SIZE >= parcelQuery.data!.total}
+              onClick={() => setParcelOffset(parcelOffset + PAGE_SIZE)}
               className="rounded border border-border-default px-sm py-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next

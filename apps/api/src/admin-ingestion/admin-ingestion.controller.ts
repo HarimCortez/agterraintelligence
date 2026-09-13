@@ -6,7 +6,12 @@ import { CurrentAdmin } from "../identity-access/admin/current-admin.decorator";
 import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { AdminIngestionService } from "./admin-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
-import { ListIngestionRunsResponseDto, TriggerIngestionResponseDto } from "./dto/admin-ingestion.dto";
+import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
+import {
+  ListIngestionRunsResponseDto,
+  ListParcelRecordsResponseDto,
+  TriggerIngestionResponseDto,
+} from "./dto/admin-ingestion.dto";
 
 /**
  * `/v1/admin/ingestion/*`. Reads are gated by `ingestion.read`; triggering
@@ -30,5 +35,17 @@ export class AdminIngestionController {
   @RequirePermission("ingestion.run")
   triggerFemaFloodZoneRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
     return this.ingestionService.triggerFemaFloodZoneRun(admin);
+  }
+
+  @Post("fl-parcels/run")
+  @RequirePermission("ingestion.run")
+  triggerFlParcelRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerFlParcelRun(admin);
+  }
+
+  @Get("parcels")
+  @RequirePermission("ingestion.read")
+  listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {
+    return this.ingestionService.listParcelRecords(query);
   }
 }

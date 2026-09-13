@@ -13,8 +13,8 @@ interface PropertyLocationRow {
 export interface IngestionRunSummary {
   id: string;
   status: "succeeded" | "failed";
-  propertiesChecked: number;
-  flagsCreated: number;
+  itemsProcessed: number;
+  recordsCreated: number;
   errorMessage: string | null;
 }
 
@@ -92,7 +92,7 @@ export class FemaFloodZoneIngestionService {
       });
       const propertiesAlreadyFlagged = new Set(existingFlags.map((f) => f.propertyId));
 
-      let flagsCreated = 0;
+      let recordsCreated = 0;
       for (const property of properties) {
         if (propertiesAlreadyFlagged.has(property.id)) continue;
 
@@ -109,7 +109,7 @@ export class FemaFloodZoneIngestionService {
             }). Source: FEMA National Flood Hazard Layer.`,
           },
         });
-        flagsCreated++;
+        recordsCreated++;
       }
 
       const updated = await this.prisma.ingestionRun.update({
@@ -117,16 +117,16 @@ export class FemaFloodZoneIngestionService {
         data: {
           status: "succeeded",
           finishedAt: new Date(),
-          propertiesChecked: properties.length,
-          flagsCreated,
+          itemsProcessed: properties.length,
+          recordsCreated,
         },
       });
 
       return {
         id: updated.id,
         status: "succeeded",
-        propertiesChecked: updated.propertiesChecked,
-        flagsCreated: updated.flagsCreated,
+        itemsProcessed: updated.itemsProcessed,
+        recordsCreated: updated.recordsCreated,
         errorMessage: null,
       };
     } catch (error) {
@@ -139,8 +139,8 @@ export class FemaFloodZoneIngestionService {
       return {
         id: updated.id,
         status: "failed",
-        propertiesChecked: updated.propertiesChecked,
-        flagsCreated: updated.flagsCreated,
+        itemsProcessed: updated.itemsProcessed,
+        recordsCreated: updated.recordsCreated,
         errorMessage: message,
       };
     }

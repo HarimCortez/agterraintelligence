@@ -242,15 +242,21 @@ model AuditLogEntry {
 // Ingestion run history
 // ---------------------------------------------------------------------------
 //
-// Tracks executions of real external-data ingestion jobs — the first
-// (and, as of this table's creation, only) real ingestion job is
-// apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts, which
-// queries FEMA's public National Flood Hazard Layer for each property's
-// coordinates and creates real property_risk_flags rows for properties
-// in a Special Flood Hazard Area. Every property/report/subscription
-// table in this schema is otherwise populated by a one-time seed script
-// (packages/db/prisma/seed.ts) — this is the first table backing a real,
-// re-runnable, external-data-backed operation, not seed data.
+// Tracks executions of real external-data ingestion jobs. Two real jobs
+// share this table today:
+// - apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts, which
+//   queries FEMA's public National Flood Hazard Layer for each
+//   property's coordinates and creates real property_risk_flags rows
+//   for properties in a Special Flood Hazard Area.
+// - apps/api/src/ingestion/fl-parcel-cadastral-ingestion.service.ts,
+//   which queries the Florida Dept. of Revenue's real statewide parcel
+//   cadastral dataset for real agricultural parcels (DOR use codes
+//   50-69) in the platform's covered counties and creates real
+//   ParcelRecord rows.
+// Every property/report/subscription table in this schema is otherwise
+// populated by a one-time seed script (packages/db/prisma/seed.ts) —
+// this is the first table backing a real, re-runnable, external-data-
+// backed operation, not seed data.
 enum IngestionRunStatus {
   running
   succeeded
@@ -267,8 +273,14 @@ model IngestionRun {
   startedAt  DateTime  @default(now()) @map("started_at")
   finishedAt DateTime? @map("finished_at")
 
-  propertiesChecked Int @default(0) @map("properties_checked")
-  flagsCreated      Int @default(0) @map("flags_created")
+  // Renamed from propertiesChecked/flagsCreated once a second real
+  // ingestion job (fl_dor_cadastral, alongside fema_flood_zones) needed
+  // this same run-history table — those names were specific to FEMA's
+  // "check a property, maybe create a risk flag" shape and didn't fit a
+  // job that ingests parcel records instead. Generic across every real
+  // ingestion job this table now backs.
+  itemsProcessed Int @default(0) @map("items_processed")
+  recordsCreated Int @default(0) @map("records_created")
 
   errorMessage String? @map("error_message") @db.Text
 
@@ -930,4 +942,69 @@ model AiCallLog {
   @@index([feature])
   @@index([createdAt])
   @@map("ai_call_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Real Florida parcel records — the first real property-fundamentals data
+// ---------------------------------------------------------------------------
+//
+// Every row in `properties` is still fabricated seed data (see that
+// model's own file-header comment) — this table is deliberately separate
+// from it, not a partial real/fake merge into the same rows. Merging real
+// government parcel data into rows that still carry a fabricated asking
+// price would make the fabricated part look more credible by
+// association, which is worse than keeping the two clearly apart.
+//
+// Populated by apps/api/src/ingestion/fl-parcel-cadastral-ingestion.service.ts
+// from the Florida Department of Revenue's real, public statewide parcel
+// cadastral dataset (Property Tax Oversight program; ArcGIS FeatureServer,
+// same integration pattern as the FEMA flood-zone job — see
+// `IngestionRun`'s doc comment). Filtered to real DOR agricultural land
+// use codes (50-69, per the Department's own published code table) in
+// the platform's covered counties, so this table holds genuinely
+// agricultural parcels, not incidental residential/government/vacant
+// land that happens to sit at a queried point.
+//
+// Deliberately does NOT include `askingPriceCents` or a "for sale"
+// listing status — county tax-roll data has no concept of either. `jv`
+// (Just Value) is Florida's tax-assessment figure, a real number but not
+// a market appraisal; stored and labeled as such, not conflated with
+// `properties.valuation.estimatedValueCents`. Turning real parcels into
+// real, priced investment listings is a separate, still-open problem
+// (no legitimate free/public source for current FL ag land listings
+// exists — see the real-data-sourcing research this table came out of).
+model ParcelRecord {
+  id String @id @default(uuid()) @db.Uuid
+
+  source String @default("fl_dor_cadastral")
+
+  // Real Florida county name, resolved from the Department of Revenue's
+  // own CO_NO county-number field — empirically verified against real
+  // parcels for each of this platform's covered counties (not assumed
+  // from a published code table), by `fl-parcel-cadastral-ingestion.service.ts`.
+  county   String
+  parcelId String @map("parcel_id")
+
+  ownerName        String? @map("owner_name")
+  siteAddress      String? @map("site_address")
+  siteCity         String? @map("site_city")
+  legalDescription String? @map("legal_description") @db.Text
+
+  // Real DOR Use Code (e.g. "066" = Orchard Groves/Citrus) plus the
+  // human-readable description from the Department's own published
+  // code table — both stored, since the raw code is the real source of
+  // truth and the description is this app's own translation of it.
+  dorUseCode        String @map("dor_use_code")
+  dorUseDescription String @map("dor_use_description")
+
+  acreage        Decimal @db.Decimal(10, 2)
+  justValueCents Int     @map("just_value_cents")
+  assessmentYear Int?    @map("assessment_year")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@unique([source, parcelId])
+  @@index([county])
+  @@index([dorUseCode])
+  @@map("parcel_records")
 }

@@ -17,8 +17,8 @@ export interface IngestionRunRow {
   status: IngestionRunStatus;
   startedAt: string;
   finishedAt: string | null;
-  propertiesChecked: number;
-  flagsCreated: number;
+  itemsProcessed: number;
+  recordsCreated: number;
   errorMessage: string | null;
 }
 
@@ -57,4 +57,46 @@ export async function triggerFemaFloodZoneRun(): Promise<IngestionRunRow> {
   const res = await adminAuthFetch("/api/v1/admin/ingestion/fema-flood-zones/run", { method: "POST" });
   if (!res.ok) return handleErrorResponse(res, "Failed to trigger the FEMA flood zone sync");
   return (await res.json()) as IngestionRunRow;
+}
+
+export async function triggerFlParcelRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/fl-parcels/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the FL parcel cadastral sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
+export interface ParcelRecordRow {
+  id: string;
+  county: string;
+  parcelId: string;
+  ownerName: string | null;
+  siteAddress: string | null;
+  siteCity: string | null;
+  dorUseCode: string;
+  dorUseDescription: string;
+  acreage: string;
+  justValueCents: number;
+  ingestedAt: string;
+}
+
+export interface ListParcelRecordsParams {
+  limit?: number;
+  offset?: number;
+  county?: string;
+}
+
+export const adminParcelRecordsQueryKey = (params: ListParcelRecordsParams) =>
+  ["admin-ingestion", "parcels", params] as const;
+
+export async function fetchAdminParcelRecords(
+  params: ListParcelRecordsParams,
+): Promise<Paginated<ParcelRecordRow>> {
+  const search = new URLSearchParams();
+  search.set("limit", String(params.limit ?? 20));
+  search.set("offset", String(params.offset ?? 0));
+  if (params.county) search.set("county", params.county);
+
+  const res = await adminAuthFetch(`/api/v1/admin/ingestion/parcels?${search.toString()}`);
+  if (!res.ok) return handleErrorResponse(res, "Failed to load parcel records");
+  return (await res.json()) as Paginated<ParcelRecordRow>;
 }
