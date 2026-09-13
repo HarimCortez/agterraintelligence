@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { AiAnalysisResult } from "@agterra/ui";
@@ -9,10 +10,16 @@ import {
   AiAnalysisUnavailableError,
   askAiAboutProperty,
 } from "@/lib/ai-analysis-api";
+import { ForbiddenError, UnauthorizedError } from "@/lib/api-errors";
+import { useAuthStore } from "@/lib/auth-store";
+import { useHandleUnauthorized } from "@/lib/use-handle-unauthorized";
 
 interface AiAnalystPanelProps {
   propertyId: string;
 }
+
+/** Investor tier and above, per REQUIREMENTS.md decision log item 5 — matches the API's `@Roles(...)` list on `AiAnalysisController` exactly. */
+const AI_ANALYST_ELIGIBLE_ROLES = new Set(["investor_subscriber", "professional_subscriber", "institutional"]);
 
 /**
  * AI Analyst panel — Property Intelligence Page's entry point into the
@@ -41,13 +48,17 @@ interface AiAnalystPanelProps {
  */
 export function AiAnalystPanel({ propertyId }: AiAnalystPanelProps) {
   const [question, setQuestion] = useState("");
+  const user = useAuthStore((state) => state.user);
+  const handleUnauthorized = useHandleUnauthorized();
 
   const mutation = useMutation({
     mutationFn: (q?: string) => askAiAboutProperty(propertyId, q),
+    onError: (error) => handleUnauthorized(error),
   });
 
   const isGeneratePending = mutation.isPending && mutation.variables === undefined;
   const isAskPending = mutation.isPending && mutation.variables !== undefined;
+  const isEligible = !!user && AI_ANALYST_ELIGIBLE_ROLES.has(user.externalRole);
 
   const handleGenerate = () => {
     mutation.mutate(undefined);
@@ -70,57 +81,99 @@ export function AiAnalystPanel({ propertyId }: AiAnalystPanelProps) {
             question. This is AI-generated and does not replace professional due diligence.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={mutation.isPending}
-          className="shrink-0 rounded bg-action-primary px-md py-sm text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isGeneratePending ? "Generating…" : "Generate AI Analysis"}
-        </button>
+        {isEligible && (
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={mutation.isPending}
+            className="shrink-0 rounded bg-action-primary px-md py-sm text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isGeneratePending ? "Generating…" : "Generate AI Analysis"}
+          </button>
+        )}
       </div>
 
-      <form onSubmit={handleAsk} className="mt-md flex flex-col gap-sm sm:flex-row">
-        <label htmlFor="ai-analyst-question" className="sr-only">
-          Ask the AI Analyst a question about this property
-        </label>
-        <input
-          id="ai-analyst-question"
-          type="text"
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          maxLength={AI_QUESTION_MAX_LENGTH}
-          placeholder="Ask a follow-up question about this property…"
-          className="flex-1 rounded border border-border-default bg-surface px-md py-sm text-sm text-text-primary placeholder:text-text-secondary focus:border-action-primary focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={mutation.isPending || question.trim().length === 0}
-          className="shrink-0 rounded border border-action-primary px-md py-sm text-sm font-semibold text-action-primary hover:bg-workspace-bg disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isAskPending ? "Asking…" : "Ask"}
-        </button>
-      </form>
+      {!isEligible ? (
+        <div className="mt-lg">{!user ? <LoggedOutState /> : <UpgradeState />}</div>
+      ) : (
+        <>
+          <form onSubmit={handleAsk} className="mt-md flex flex-col gap-sm sm:flex-row">
+            <label htmlFor="ai-analyst-question" className="sr-only">
+              Ask the AI Analyst a question about this property
+            </label>
+            <input
+              id="ai-analyst-question"
+              type="text"
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              maxLength={AI_QUESTION_MAX_LENGTH}
+              placeholder="Ask a follow-up question about this property…"
+              className="flex-1 rounded border border-border-default bg-surface px-md py-sm text-sm text-text-primary placeholder:text-text-secondary focus:border-action-primary focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={mutation.isPending || question.trim().length === 0}
+              className="shrink-0 rounded border border-action-primary px-md py-sm text-sm font-semibold text-action-primary hover:bg-workspace-bg disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isAskPending ? "Asking…" : "Ask"}
+            </button>
+          </form>
 
-      <div className="mt-lg">
-        {mutation.isIdle && <IdleState />}
-        {mutation.isPending && <LoadingState />}
-        {mutation.isError && (
-          <ErrorState error={mutation.error} onRetry={() => mutation.mutate(mutation.variables)} />
-        )}
-        {mutation.isSuccess && (
-          <div className="flex flex-col gap-sm">
-            {mutation.data.question && (
-              <p className="text-sm text-text-secondary">
-                <span className="font-semibold text-text-primary">Question: </span>
-                {mutation.data.question}
-              </p>
+          <div className="mt-lg">
+            {mutation.isIdle && <IdleState />}
+            {mutation.isPending && <LoadingState />}
+            {mutation.isError && (
+              <ErrorState error={mutation.error} onRetry={() => mutation.mutate(mutation.variables)} />
             )}
-            <AiAnalysisResult result={mutation.data} />
+            {mutation.isSuccess && (
+              <div className="flex flex-col gap-sm">
+                {mutation.data.question && (
+                  <p className="text-sm text-text-secondary">
+                    <span className="font-semibold text-text-primary">Question: </span>
+                    {mutation.data.question}
+                  </p>
+                )}
+                <AiAnalysisResult result={mutation.data} />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </section>
+  );
+}
+
+function LoggedOutState() {
+  return (
+    <div className="rounded border border-border-subtle bg-workspace-bg p-md text-sm text-text-secondary">
+      <p className="font-semibold text-text-primary">Log in to use the AI Analyst</p>
+      <p className="mt-xs">
+        AI Analyst is available to Investor-tier subscribers and above.{" "}
+        <Link href="/login" className="font-semibold text-action-primary hover:underline">
+          Log in
+        </Link>{" "}
+        or{" "}
+        <Link href="/register" className="font-semibold text-action-primary hover:underline">
+          create an account
+        </Link>{" "}
+        to get started.
+      </p>
+    </div>
+  );
+}
+
+function UpgradeState() {
+  return (
+    <div className="rounded border border-border-subtle bg-workspace-bg p-md text-sm text-text-secondary">
+      <p className="font-semibold text-text-primary">Upgrade to unlock the AI Analyst</p>
+      <p className="mt-xs">
+        AI Analyst is included with the Investor plan and above.{" "}
+        <Link href="/account" className="font-semibold text-action-primary hover:underline">
+          Upgrade your plan
+        </Link>{" "}
+        to generate AI-assisted analysis on this property.
+      </p>
+    </div>
   );
 }
 
@@ -157,6 +210,30 @@ function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => void })
           This feature isn&apos;t fully live yet. The rest of this property&apos;s data above is
           unaffected — check back soon.
         </p>
+      </div>
+    );
+  }
+
+  if (error instanceof ForbiddenError) {
+    return (
+      <div
+        role="status"
+        className="rounded border border-border-subtle bg-workspace-bg p-md text-sm text-text-secondary"
+      >
+        <p className="font-semibold text-text-primary">Your plan no longer includes this</p>
+        <p className="mt-xs">{error.message}</p>
+      </div>
+    );
+  }
+
+  if (error instanceof UnauthorizedError) {
+    return (
+      <div
+        role="status"
+        className="rounded border border-border-subtle bg-workspace-bg p-md text-sm text-text-secondary"
+      >
+        <p className="font-semibold text-text-primary">Your session expired</p>
+        <p className="mt-xs">Redirecting you to log in…</p>
       </div>
     );
   }

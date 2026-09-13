@@ -14,3 +14,17 @@ export class UnauthorizedError extends Error {
     this.name = "UnauthorizedError";
   }
 }
+
+/**
+ * Thrown when an `authFetch`-based client gets a `403` — unlike
+ * `UnauthorizedError` (401, "you're logged out"), this means "you're
+ * logged in, but your plan doesn't include this" (a `@Roles(...)`-gated
+ * route via `ExternalRolesGuard`, e.g. the AI Analyst's Investor-tier
+ * gate). Callers should show an upgrade prompt, not redirect to `/login`.
+ */
+export class ForbiddenError extends Error {
+  constructor(message = "Your current plan doesn't include this feature.") {
+    super(message);
+    this.name = "ForbiddenError";
+  }
+}

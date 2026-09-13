@@ -1,12 +1,19 @@
 /**
- * POST /v1/properties/:id/ai/ask client — request/response types + fetch,
- * mirroring `properties-api.ts`'s base-URL resolution pattern (server calls
- * the API directly; browser calls the same-origin `/api/*` rewrite).
+ * POST /v1/properties/:id/ai/ask client — request/response types + fetch.
+ * Requires login and Investor tier or above (`JwtAuthGuard` +
+ * `ExternalRolesGuard` on the API side, per REQUIREMENTS.md decision log
+ * item 5), so this goes through `authFetch` like `watchlist-api.ts` rather
+ * than plain `fetch` — client-only (`"use client"`) as a result, unlike
+ * the old public version, which could be called from a server component.
  *
  * Verified against `apps/api/src/ai-analysis/{ai-analysis.controller.ts,
  * ai-analysis.service.ts, dto/ai-analysis-response.dto.ts, dto/ask-ai.dto.ts}`,
  * not guessed at.
  */
+"use client";
+
+import { authFetch } from "./auth-fetch";
+import { ForbiddenError, UnauthorizedError } from "./api-errors";
 
 export type AiConfidence = "high" | "moderate" | "limited" | "unknown";
 
@@ -22,13 +29,6 @@ export interface AiAnalysisResponse {
 }
 
 export const AI_QUESTION_MAX_LENGTH = 500;
-
-function resolveBaseUrl(): string {
-  if (typeof window === "undefined") {
-    return process.env.API_URL ?? "http://localhost:3001";
-  }
-  return "/api";
-}
 
 /**
  * Thrown for the endpoint's 503 — `AiAnalysisService` collapses three
@@ -50,16 +50,22 @@ export async function askAiAboutProperty(
   propertyId: string,
   question?: string,
 ): Promise<AiAnalysisResponse> {
-  const url = `${resolveBaseUrl()}/v1/properties/${encodeURIComponent(propertyId)}/ai/ask`;
+  const url = `/api/v1/properties/${encodeURIComponent(propertyId)}/ai/ask`;
   const trimmed = question?.trim();
 
-  const res = await fetch(url, {
+  const res = await authFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(trimmed ? { question: trimmed } : {}),
     cache: "no-store",
   });
 
+  if (res.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (res.status === 403) {
+    throw new ForbiddenError((await readErrorMessage(res)) ?? undefined);
+  }
   if (res.status === 503) {
     throw new AiAnalysisUnavailableError(
       (await readErrorMessage(res)) ?? "AI Analyst is temporarily unavailable.",

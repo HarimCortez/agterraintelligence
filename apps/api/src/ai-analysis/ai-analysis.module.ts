@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { PropertiesModule } from "../properties/properties.module";
+import { InvestorAuthModule } from "../identity-access/investor/investor-auth.module";
+import { TokensModule } from "../identity-access/tokens/tokens.module";
 import { AiAnalysisController } from "./ai-analysis.controller";
 import { AiAnalysisService } from "./ai-analysis.service";
 
@@ -11,13 +13,16 @@ import { AiAnalysisService } from "./ai-analysis.service";
  * property lookup reuses the existing `getPropertyById` query/404 handling
  * instead of duplicating it. `PrismaService` (for `ai_interactions`
  * logging) comes from the global `PrismaModule`, so no import needed here.
+ * Imports `InvestorAuthModule`/`TokensModule` (same pattern as
+ * `WatchlistModule`) for `JwtAuthGuard`/`ExternalRolesGuard`, now that
+ * Decision 5's real tier-gating is wired up on the controller.
  *
  * Per-route rate limiting (`@Throttle` on `AiAnalysisController`) layers on
  * top of the app-wide default `ThrottlerGuard` already registered in
  * `IdentityAccessModule`.
  */
 @Module({
-  imports: [PropertiesModule],
+  imports: [PropertiesModule, TokensModule, InvestorAuthModule],
   controllers: [AiAnalysisController],
   providers: [AiAnalysisService],
 })
