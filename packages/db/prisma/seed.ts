@@ -578,6 +578,21 @@ const ROLE_PERMISSIONS: { role: InternalRole; permissionKey: string; allowed: bo
   { role: "admin", permissionKey: "ai_monitoring.read", allowed: true },
   { role: "ai_model_monitor", permissionKey: "ai_monitoring.read", allowed: true },
   { role: "readonly_analyst", permissionKey: "ai_monitoring.read", allowed: true },
+
+  // `settings.read`/`settings.write`
+  // (apps/api/src/admin-settings/admin-settings.controller.ts). `.read`
+  // (viewing admin users and the permission matrix) is admin/super_admin
+  // only — this is the RBAC configuration itself, not a domain-specific
+  // module, so it doesn't extend to any single-purpose persona.
+  // `.write` (actually editing the permission matrix) is deliberately
+  // super_admin ONLY, narrower than every other module's write
+  // permission in this codebase — it can grant or revoke access to every
+  // other admin module, including itself, so it gets the tightest gate
+  // in the whole system.
+  { role: "super_admin", permissionKey: "settings.read", allowed: true },
+  { role: "admin", permissionKey: "settings.read", allowed: true },
+
+  { role: "super_admin", permissionKey: "settings.write", allowed: true },
 ];
 
 const REPORT_TIERS: ReportTierSeed[] = [

@@ -65,6 +65,11 @@ export function AdminNavLinks() {
           AI &amp; Model Monitoring
         </Link>
       </li>
+      <li>
+        <Link href="/settings" className={linkClass(pathname.startsWith("/settings"))}>
+          Administration Settings
+        </Link>
+      </li>
     </ul>
   );
 }

@@ -19,6 +19,7 @@ import { SupportModule } from "./support/support.module";
 import { AdminSupportModule } from "./admin-support/admin-support.module";
 import { AdminDataQualityModule } from "./admin-data-quality/admin-data-quality.module";
 import { AdminAiMonitoringModule } from "./admin-ai-monitoring/admin-ai-monitoring.module";
+import { AdminSettingsModule } from "./admin-settings/admin-settings.module";
 
 /**
  * Root application module.
@@ -49,6 +50,7 @@ import { AdminAiMonitoringModule } from "./admin-ai-monitoring/admin-ai-monitori
     AdminSupportModule,
     AdminDataQualityModule,
     AdminAiMonitoringModule,
+    AdminSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
