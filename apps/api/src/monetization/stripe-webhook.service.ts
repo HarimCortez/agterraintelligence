@@ -315,6 +315,21 @@ export class StripeWebhookService {
     }
   }
 
+  /**
+   * Keeps local `Subscription.status` in sync, and — per REQUIREMENTS.md's
+   * decision log gap #2, resolved: revert at period end, not immediately
+   * on cancel-click — reverts the user's `externalRole` back to `free`
+   * once the subscription is genuinely over. That resolution falls
+   * straight out of following Stripe's own `subscription.status`: a
+   * standard Billing Portal cancel sets `cancel_at_period_end` but Stripe
+   * doesn't actually move `status` off `"active"` (or fire
+   * `customer.subscription.deleted`) until the already-paid period ends —
+   * so no separate "is it actually period end yet" check is needed here,
+   * `mapStripeStatus` reaching `"canceled"` already means it's over.
+   * `updated`/`past_due` intentionally does NOT revert the role — a
+   * subscriber mid-retry on a failed payment keeps access through
+   * Stripe's own dunning window, same as most SaaS billing UX.
+   */
   private async handleSubscriptionStatusSync(subscription: Stripe.Subscription): Promise<void> {
     const status = this.mapStripeStatus(subscription.status);
     if (!status) {
@@ -324,10 +339,22 @@ export class StripeWebhookService {
       return;
     }
 
-    // Scoped by `stripeSubscriptionId` (unique) — the only key we have
-    // linking this Stripe object back to a local row; `updateMany` (not
-    // `update`) since it's not the model's primary key.
-    const { count } = await this.prisma.subscription.updateMany({
+    // Looked up first (not just `updateMany`) because reverting the role
+    // below needs `userId`, which the Stripe subscription object itself
+    // doesn't carry — `stripeSubscriptionId` is the only key linking this
+    // event back to a local row.
+    const existing = await this.prisma.subscription.findUnique({
+      where: { stripeSubscriptionId: subscription.id },
+      select: { userId: true },
+    });
+    if (!existing) {
+      this.logger.warn(
+        `No local Subscription row found for Stripe subscription ${subscription.id} during status sync.`,
+      );
+      return;
+    }
+
+    await this.prisma.subscription.update({
       where: { stripeSubscriptionId: subscription.id },
       data: {
         status,
@@ -335,10 +362,10 @@ export class StripeWebhookService {
       },
     });
 
-    if (count === 0) {
-      this.logger.warn(
-        `No local Subscription row found for Stripe subscription ${subscription.id} during status sync.`,
-      );
+    if (status === "canceled") {
+      // Idempotent — safe to run again if Stripe redelivers this event
+      // after the role was already reverted.
+      await this.prisma.user.update({ where: { id: existing.userId }, data: { externalRole: "free" } });
     }
   }
 

@@ -63,11 +63,30 @@ function makeInvoiceEvent(
   });
 }
 
+function makeSubscriptionEvent(
+  type: "customer.subscription.updated" | "customer.subscription.deleted",
+  subscription: Partial<Stripe.Subscription> & { status: Stripe.Subscription.Status },
+): string {
+  return JSON.stringify({
+    id: "evt_test_sub_1",
+    object: "event",
+    type,
+    data: {
+      object: {
+        id: "sub_test_1",
+        object: "subscription",
+        items: { data: [{ current_period_end: 1893456000 }] },
+        ...subscription,
+      },
+    },
+  });
+}
+
 describe("StripeWebhookService — signature verification", () => {
   let service: StripeWebhookService;
 
   const prismaMock = {
-    subscription: { upsert: jest.fn(), updateMany: jest.fn() },
+    subscription: { upsert: jest.fn(), updateMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     user: { update: jest.fn() },
     reportOrder: { update: jest.fn(), updateMany: jest.fn() },
   };
@@ -383,5 +402,99 @@ describe("StripeWebhookService — signature verification", () => {
     expect(result).toEqual({ received: true });
     expect(prismaMock.subscription.upsert).not.toHaveBeenCalled();
     expect(prismaMock.subscription.updateMany).not.toHaveBeenCalled();
+  });
+
+  describe("customer.subscription.updated/.deleted — status sync and role revert", () => {
+    it("syncs status and currentPeriodEnd, and does NOT touch externalRole, while still active", async () => {
+      service = await build(makeConfig());
+      prismaMock.subscription.findUnique.mockResolvedValue({ userId: "user-1" });
+
+      const payload = makeSubscriptionEvent("customer.subscription.updated", { status: "active" });
+      const signature = signPayload(payload);
+
+      const result = await service.handleWebhook(Buffer.from(payload), signature);
+
+      expect(result).toEqual({ received: true });
+      expect(prismaMock.subscription.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { stripeSubscriptionId: "sub_test_1" },
+          data: expect.objectContaining({ status: "active" }),
+        }),
+      );
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it("reverts externalRole to free once Stripe reports the subscription as canceled — this is the real period-end signal, no separate scheduling needed", async () => {
+      service = await build(makeConfig());
+      prismaMock.subscription.findUnique.mockResolvedValue({ userId: "user-1" });
+
+      const payload = makeSubscriptionEvent("customer.subscription.deleted", { status: "canceled" });
+      const signature = signPayload(payload);
+
+      const result = await service.handleWebhook(Buffer.from(payload), signature);
+
+      expect(result).toEqual({ received: true });
+      expect(prismaMock.subscription.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ status: "canceled" }) }),
+      );
+      expect(prismaMock.user.update).toHaveBeenCalledWith({
+        where: { id: "user-1" },
+        data: { externalRole: "free" },
+      });
+    });
+
+    it("also reverts on Stripe status 'unpaid' (mapped to local 'canceled')", async () => {
+      service = await build(makeConfig());
+      prismaMock.subscription.findUnique.mockResolvedValue({ userId: "user-1" });
+
+      const payload = makeSubscriptionEvent("customer.subscription.updated", { status: "unpaid" });
+      const signature = signPayload(payload);
+
+      await service.handleWebhook(Buffer.from(payload), signature);
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith({
+        where: { id: "user-1" },
+        data: { externalRole: "free" },
+      });
+    });
+
+    it("does NOT revert the role for past_due — a subscriber mid-payment-retry keeps access", async () => {
+      service = await build(makeConfig());
+      prismaMock.subscription.findUnique.mockResolvedValue({ userId: "user-1" });
+
+      const payload = makeSubscriptionEvent("customer.subscription.updated", { status: "past_due" });
+      const signature = signPayload(payload);
+
+      await service.handleWebhook(Buffer.from(payload), signature);
+
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it("logs and does not throw, and never touches externalRole, when no local Subscription row matches", async () => {
+      service = await build(makeConfig());
+      prismaMock.subscription.findUnique.mockResolvedValue(null);
+
+      const payload = makeSubscriptionEvent("customer.subscription.deleted", { status: "canceled" });
+      const signature = signPayload(payload);
+
+      const result = await service.handleWebhook(Buffer.from(payload), signature);
+
+      expect(result).toEqual({ received: true });
+      expect(prismaMock.subscription.update).not.toHaveBeenCalled();
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it("is idempotent — a redelivered cancellation event reverts the role again without throwing", async () => {
+      service = await build(makeConfig());
+      prismaMock.subscription.findUnique.mockResolvedValue({ userId: "user-1" });
+
+      const payload = makeSubscriptionEvent("customer.subscription.deleted", { status: "canceled" });
+      const signature = signPayload(payload);
+
+      await service.handleWebhook(Buffer.from(payload), signature);
+      await service.handleWebhook(Buffer.from(payload), signature);
+
+      expect(prismaMock.user.update).toHaveBeenCalledTimes(2);
+    });
   });
 });

@@ -88,10 +88,13 @@ export class ReportGenerationService {
       // Payment has already succeeded at this point (or, on a retry, was
       // already confirmed on the original attempt). Do NOT attempt an
       // automatic Stripe refund here — issuing a refund is a real
-      // financial action that should go through an actual review process
-      // (a future admin/support feature), not be triggered silently by an
-      // error path. Flagged explicitly, not swallowed: the order is
-      // marked `failed` and logged at `error` level for manual follow-up.
+      // financial action that should go through an actual review process,
+      // not be triggered silently by an error path. That review process
+      // now exists (Support Center: file a ticket against this order,
+      // `AdminSupportService.refundTicketOrder` issues the real refund)
+      // — this path still deliberately doesn't call it automatically.
+      // Flagged explicitly, not swallowed: the order is marked `failed`
+      // and logged at `error` level for manual follow-up.
       this.logger.error(
         `Report generation failed for order ${order.id} (property ${order.propertyId}, tier ${order.reportTierCode}) — marking failed, NOT issuing a refund: ${error instanceof Error ? error.message : String(error)}`,
       );
