@@ -23,6 +23,7 @@ function makeProperty(overrides: Partial<PropertyDetailDto> = {}): PropertyDetai
   dto.soilData = null;
   dto.cropCover = null;
   dto.agCensusSummary = null;
+  dto.timberSummary = null;
   return Object.assign(dto, overrides);
 }
 

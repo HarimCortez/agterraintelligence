@@ -15,6 +15,7 @@ import {
   triggerCitrusBlackSpotRun,
   triggerCroplandCoverRun,
   triggerNassAgCensusRun,
+  triggerFiaTimberRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -26,20 +27,23 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the eight real ingestion jobs that exist: FEMA
+ * admin manually trigger, the nine real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
- * Data Layer, and the USDA NASS Census of Agriculture (this last one runs
+ * Data Layer, the USDA NASS Census of Agriculture (this one runs
  * noticeably longer than the others — it streams and parses a ~300MB
  * bulk file rather than making a live per-property query, see
- * `nass-ag-census-ingestion.service.ts`'s doc comment). See
+ * `nass-ag-census-ingestion.service.ts`'s doc comment), and the USDA
+ * Forest Service Forest Inventory and Analysis program (timber
+ * properties only — see `fia-timber-ingestion.service.ts`'s doc
+ * comment). See
  * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
  * `citrus-black-spot-ingestion.service.ts`, `cropland-cover-ingestion.service.ts`,
- * and `nass-ag-census-ingestion.service.ts`'s doc comments for why all eight
- * are manually triggered rather than scheduled.
+ * `nass-ag-census-ingestion.service.ts`, and `fia-timber-ingestion.service.ts`'s
+ * doc comments for why all nine are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -148,6 +152,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerTimberMutation = useMutation({
+    mutationFn: () => triggerFiaTimberRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -236,6 +249,14 @@ export function IngestionWorkspace() {
           >
             {triggerAgCensusMutation.isPending || runInProgress ? "Running…" : "Run NASS Ag Census Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerTimberMutation.isPending || runInProgress}
+            onClick={() => triggerTimberMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerTimberMutation.isPending || runInProgress ? "Running…" : "Run FIA Timber Sync"}
+          </button>
         </div>
       </header>
 
@@ -248,6 +269,7 @@ export function IngestionWorkspace() {
         triggerBlackSpotMutation,
         triggerCropCoverMutation,
         triggerAgCensusMutation,
+        triggerTimberMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -264,7 +286,8 @@ export function IngestionWorkspace() {
         triggerCitrusMutation.isSuccess ||
         triggerBlackSpotMutation.isSuccess ||
         triggerCropCoverMutation.isSuccess ||
-        triggerAgCensusMutation.isSuccess) && (
+        triggerAgCensusMutation.isSuccess ||
+        triggerTimberMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

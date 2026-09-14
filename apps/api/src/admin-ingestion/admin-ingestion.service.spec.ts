@@ -21,6 +21,7 @@ import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine
 import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-ingestion.service";
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
+import { FiaTimberIngestionService } from "../ingestion/fia-timber-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -46,6 +47,7 @@ describe("AdminIngestionService", () => {
   const citrusBlackSpotIngestionMock = { trigger: jest.fn() };
   const croplandCoverIngestionMock = { trigger: jest.fn() };
   const nassAgCensusIngestionMock = { trigger: jest.fn() };
+  const fiaTimberIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -62,6 +64,7 @@ describe("AdminIngestionService", () => {
         { provide: CitrusBlackSpotIngestionService, useValue: citrusBlackSpotIngestionMock },
         { provide: CroplandCoverIngestionService, useValue: croplandCoverIngestionMock },
         { provide: NassAgCensusIngestionService, useValue: nassAgCensusIngestionMock },
+        { provide: FiaTimberIngestionService, useValue: fiaTimberIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -349,6 +352,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-8",
           metadata: { source: "usda_nass_ag_census" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerFiaTimberRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      fiaTimberIngestionMock.trigger.mockResolvedValue({ id: "run-9" });
+
+      const result = await service.triggerFiaTimberRun(ADMIN);
+
+      expect(fiaTimberIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-9",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_fs_fia_timber source", async () => {
+      fiaTimberIngestionMock.trigger.mockResolvedValue({ id: "run-9" });
+
+      await service.triggerFiaTimberRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-9",
+          metadata: { source: "usda_fs_fia_timber" },
         }),
       );
     });

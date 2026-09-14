@@ -480,6 +480,7 @@ model Property {
   soilData         PropertySoilData?
   cropCover        PropertyCropCover?
   agCensusSummary  PropertyAgCensusSummary?
+  timberSummary    PropertyTimberSummary?
   aiInteractions   AiInteraction[]
   watchlistItems   WatchlistItem[]
   reportOrders     ReportOrder[]
@@ -666,6 +667,58 @@ model PropertyAgCensusSummary {
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_ag_census_summary")
+}
+
+// One-to-one with `properties`. Real, county-level USDA Forest Service
+// Forest Inventory and Analysis (FIA) figures for the property's own
+// county — see `apps/api/src/ingestion/fia-timber-client.ts`'s doc
+// comment for how this was sourced (the free, keyless FIADB-API — no
+// registration, no bulk-file workaround needed, unlike
+// `PropertyAgCensusSummary`'s NASS source).
+//
+// Same "county-wide, not parcel-specific" reasoning as
+// `PropertyAgCensusSummary`, but scoped to `landUseType: "timber"`
+// properties only (like `CitrusQuarantineIngestionService`) rather than
+// swept across every property — county timber volume isn't clearly
+// relevant context for a citrus or row-crop parcel the way land value
+// was for every land use in the ag census job.
+//
+// `countyTimberVolumeSamplingErrorPct` is deliberately stored alongside
+// the estimate, not discarded: FIA's county-level figures are
+// design-based statistical estimates from a sparse field-plot sample
+// (single digits to low dozens of plots per county), and the published
+// sampling error genuinely varies a lot by county size — confirmed live
+// across this project's 5 target counties, from 18% (Polk, 56+ plots) up
+// to 46% (Okeechobee, 7 plots). Surfacing that honestly, not presenting
+// the estimate as precise, matches how every other real-but-uncertain
+// figure in this schema is handled.
+//
+// Plot-level geolocation was deliberately not pursued even though FIA
+// technically publishes plot coordinates: they're legally fuzzed/swapped
+// within roughly half a mile to a mile (Food Security Act privacy
+// protections for private landowners, confirmed via the Forest Service's
+// own Spatial Data Services documentation) — county is the finest
+// granularity the source actually offers, not a limitation this project
+// is working around.
+model PropertyTimberSummary {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /** The most recent year in the FIA evaluation panel this reading came from, e.g. 2022 (the panel itself spans multiple years of field visits). */
+  year Int
+
+  /** County-wide timberland area, in acres. */
+  countyTimberlandAcres Int? @map("county_timberland_acres")
+  /** County-wide net merchantable timber volume density, in cubic feet per acre of timberland (computed by dividing FIA's total volume estimate by its total timberland-acres estimate for the same county). */
+  countyTimberVolumeCuFtPerAcre Int? @map("county_timber_volume_cu_ft_per_acre")
+  /** FIA's published sampling error for the underlying volume estimate, as a percent (e.g. 31.6) — a real measure of how much to trust the figure, not a fixed/precise number. */
+  countyTimberVolumeSamplingErrorPct Decimal? @db.Decimal(5, 2) @map("county_timber_volume_sampling_error_pct")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@map("property_timber_summary")
 }
 
 // ---------------------------------------------------------------------------

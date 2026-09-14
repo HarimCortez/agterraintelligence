@@ -52,6 +52,10 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     agCensusYear: null,
     agCensusCountyCattleInventoryHead: null,
     agCensusCountyAgLandValueCentsPerAcre: null,
+    timberYear: null,
+    timberCountyTimberlandAcres: null,
+    timberCountyVolumeCuFtPerAcre: null,
+    timberCountyVolumeSamplingErrorPct: null,
     ...overrides,
   };
 }

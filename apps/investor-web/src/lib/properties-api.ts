@@ -113,6 +113,14 @@ export interface PropertyAgCensusSummary {
   countyAgLandValueCentsPerAcre: number | null;
 }
 
+/** Real USDA Forest Service FIA figures for the property's own COUNTY (not parcel-specific). */
+export interface PropertyTimberSummary {
+  year: number;
+  countyTimberlandAcres: number | null;
+  countyTimberVolumeCuFtPerAcre: number | null;
+  countyTimberVolumeSamplingErrorPct: number | null;
+}
+
 export interface PropertyDetail {
   id: string;
   address: string;
@@ -135,6 +143,7 @@ export interface PropertyDetail {
   soilData: PropertySoilData | null;
   cropCover: PropertyCropCover | null;
   agCensusSummary: PropertyAgCensusSummary | null;
+  timberSummary: PropertyTimberSummary | null;
 }
 
 export const BAND_OPTIONS: { value: OpportunityBand; label: string }[] = [

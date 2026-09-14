@@ -1,5 +1,5 @@
 import { LandUseType, ListingStatus, OpportunityBand, ValuationConfidence } from "@agterra/db";
-import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary, PropertyAgCensusSummaryDto } from "./dto/property-result.dto";
+import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary, PropertyAgCensusSummaryDto, PropertyTimberSummaryDto } from "./dto/property-result.dto";
 
 /**
  * Raw result row from the combined query. The query includes:
@@ -80,6 +80,12 @@ export interface RawPropertyDetailRow {
   agCensusYear: number | null;
   agCensusCountyCattleInventoryHead: number | null;
   agCensusCountyAgLandValueCentsPerAcre: number | null;
+  // Timber summary (null if no PropertyTimberSummary row exists for this property yet).
+  // `timberYear` is the presence signal (always set when the row exists).
+  timberYear: number | null;
+  timberCountyTimberlandAcres: number | null;
+  timberCountyVolumeCuFtPerAcre: number | null;
+  timberCountyVolumeSamplingErrorPct: string | null; // Decimal, stringified
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -218,6 +224,19 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
     } satisfies PropertyAgCensusSummaryDto;
   } else {
     result.agCensusSummary = null;
+  }
+
+  // Timber summary (null if no PropertyTimberSummary row exists for this property yet)
+  if (row.timberYear !== null) {
+    result.timberSummary = {
+      year: row.timberYear,
+      countyTimberlandAcres: row.timberCountyTimberlandAcres,
+      countyTimberVolumeCuFtPerAcre: row.timberCountyVolumeCuFtPerAcre,
+      countyTimberVolumeSamplingErrorPct:
+        row.timberCountyVolumeSamplingErrorPct !== null ? parseFloat(row.timberCountyVolumeSamplingErrorPct) : null,
+    } satisfies PropertyTimberSummaryDto;
+  } else {
+    result.timberSummary = null;
   }
 
   return result;

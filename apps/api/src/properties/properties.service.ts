@@ -244,7 +244,11 @@ export class PropertiesService {
         pcc.crop_description AS "cropCoverDescription",
         pacs.year AS "agCensusYear",
         pacs.county_cattle_inventory_head AS "agCensusCountyCattleInventoryHead",
-        pacs.county_ag_land_value_cents_per_acre AS "agCensusCountyAgLandValueCentsPerAcre"
+        pacs.county_ag_land_value_cents_per_acre AS "agCensusCountyAgLandValueCentsPerAcre",
+        pts.year AS "timberYear",
+        pts.county_timberland_acres AS "timberCountyTimberlandAcres",
+        pts.county_timber_volume_cu_ft_per_acre AS "timberCountyVolumeCuFtPerAcre",
+        pts.county_timber_volume_sampling_error_pct AS "timberCountyVolumeSamplingErrorPct"
       FROM properties p
       LEFT JOIN opportunity_scores os ON p.id = os.property_id
       LEFT JOIN property_valuations pv ON p.id = pv.property_id
@@ -252,6 +256,7 @@ export class PropertiesService {
       LEFT JOIN property_soil_data psd ON p.id = psd.property_id
       LEFT JOIN property_crop_cover pcc ON p.id = pcc.property_id
       LEFT JOIN property_ag_census_summary pacs ON p.id = pacs.property_id
+      LEFT JOIN property_timber_summary pts ON p.id = pts.property_id
       WHERE p.id = $1::uuid
       GROUP BY p.id, p.address, p.county, p.state, p.acreage, p.asking_price_cents,
                p.land_use_type, p.listing_status, p.location,
@@ -260,7 +265,9 @@ export class PropertiesService {
                psd.map_unit_symbol, psd.map_unit_name, psd.drainage_class,
                psd.flood_frequency, psd.slope_percent, psd.capability_class, psd.hydric_pct,
                pcc.year, pcc.crop_code, pcc.crop_description,
-               pacs.year, pacs.county_cattle_inventory_head, pacs.county_ag_land_value_cents_per_acre
+               pacs.year, pacs.county_cattle_inventory_head, pacs.county_ag_land_value_cents_per_acre,
+               pts.year, pts.county_timberland_acres, pts.county_timber_volume_cu_ft_per_acre,
+               pts.county_timber_volume_sampling_error_pct
     `;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

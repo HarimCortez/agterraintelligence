@@ -101,6 +101,12 @@ export async function triggerNassAgCensusRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerFiaTimberRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/fia-timber/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the FIA timber sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

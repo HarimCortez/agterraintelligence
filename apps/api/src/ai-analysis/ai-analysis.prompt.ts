@@ -94,6 +94,7 @@ export function buildUserPrompt(property: PropertyDetailDto, question: string | 
     soilData: property.soilData,
     cropCover: property.cropCover,
     agCensusSummary: property.agCensusSummary,
+    timberSummary: property.timberSummary,
   };
 
   const effectiveQuestion = question && question.trim().length > 0 ? question.trim() : DEFAULT_QUESTION;
@@ -146,6 +147,7 @@ export function buildTieredReportUserPrompt(property: PropertyDetailDto, tier: R
     soilData: property.soilData,
     cropCover: property.cropCover,
     agCensusSummary: property.agCensusSummary,
+    timberSummary: property.timberSummary,
   };
 
   const instruction = TIER_INSTRUCTIONS[tier];

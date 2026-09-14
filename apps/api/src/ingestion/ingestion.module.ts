@@ -7,6 +7,8 @@ import { CroplandCoverIngestionService } from "./cropland-cover-ingestion.servic
 import { CroplandDataClient } from "./cropland-data-client";
 import { FemaFloodZoneClient } from "./fema-flood-zone-client";
 import { FemaFloodZoneIngestionService } from "./fema-flood-zone-ingestion.service";
+import { FiaTimberClient } from "./fia-timber-client";
+import { FiaTimberIngestionService } from "./fia-timber-ingestion.service";
 import { FlParcelClient } from "./fl-parcel-client";
 import { FlParcelCadastralIngestionService } from "./fl-parcel-cadastral-ingestion.service";
 import { NassAgCensusClient } from "./nass-ag-census-client";
@@ -17,7 +19,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Eight sources: FEMA flood zones
+ * Real external-data ingestion module. Nine sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -28,13 +30,17 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * doc comment — a separate program from HLB, on the same underlying
  * federal quarantine dataset but requiring a genuine per-point spatial
  * query rather than a per-county lookup), the USDA NASS Cropland Data
- * Layer (see `CroplandCoverIngestionService`'s doc comment), and the
- * USDA NASS Census of Agriculture (see `NassAgCensusIngestionService`'s
- * doc comment — sourced via a free bulk file rather than the live Quick
- * Stats API, which requires a registered key). Exports all eight
- * ingestion services so `AdminIngestionModule` can trigger runs without
- * this module owning any admin-facing HTTP surface itself — same
- * separation `MonetizationModule`/`AdminReportFulfillmentModule` use for
+ * Layer (see `CroplandCoverIngestionService`'s doc comment), the USDA
+ * NASS Census of Agriculture (see `NassAgCensusIngestionService`'s doc
+ * comment — sourced via a free bulk file rather than the live Quick
+ * Stats API, which requires a registered key), and the USDA Forest
+ * Service Forest Inventory and Analysis program (see
+ * `FiaTimberIngestionService`'s doc comment — a real, live, keyless JSON
+ * API, unlike the NASS Census of Agriculture job it otherwise resembles).
+ * Exports all nine ingestion services so `AdminIngestionModule` can
+ * trigger runs without this module owning any admin-facing HTTP surface
+ * itself — same separation
+ * `MonetizationModule`/`AdminReportFulfillmentModule` use for
  * `ReportGenerationService`.
  */
 @Module({
@@ -55,6 +61,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     CroplandCoverIngestionService,
     NassAgCensusClient,
     NassAgCensusIngestionService,
+    FiaTimberClient,
+    FiaTimberIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -65,6 +73,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     CitrusBlackSpotIngestionService,
     CroplandCoverIngestionService,
     NassAgCensusIngestionService,
+    FiaTimberIngestionService,
   ],
 })
 export class IngestionModule {}

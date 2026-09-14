@@ -44,6 +44,14 @@ export interface PropertyAgCensusSummaryDto {
   countyAgLandValueCentsPerAcre: number | null;
 }
 
+/** Real USDA Forest Service FIA figures for the property's own COUNTY (not parcel-specific) — see `PropertyTimberSummary` in schema.prisma. */
+export interface PropertyTimberSummaryDto {
+  year: number;
+  countyTimberlandAcres: number | null;
+  countyTimberVolumeCuFtPerAcre: number | null;
+  countyTimberVolumeSamplingErrorPct: number | null;
+}
+
 export class PropertyResultDto {
   id!: string;
   address!: string;
@@ -78,6 +86,7 @@ export class PropertyDetailDto {
   soilData!: PropertySoilSummary | null;
   cropCover!: PropertyCropCoverSummary | null;
   agCensusSummary!: PropertyAgCensusSummaryDto | null;
+  timberSummary!: PropertyTimberSummaryDto | null;
 }
 
 export class ListPropertiesResponseDto {

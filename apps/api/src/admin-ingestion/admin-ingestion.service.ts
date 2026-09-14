@@ -10,6 +10,7 @@ import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine
 import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-ingestion.service";
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
+import { FiaTimberIngestionService } from "../ingestion/fia-timber-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -30,6 +31,7 @@ export class AdminIngestionService {
     private readonly citrusBlackSpotIngestion: CitrusBlackSpotIngestionService,
     private readonly croplandCoverIngestion: CroplandCoverIngestionService,
     private readonly nassAgCensusIngestion: NassAgCensusIngestionService,
+    private readonly fiaTimberIngestion: FiaTimberIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -164,6 +166,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_nass_ag_census" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerFiaTimberRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.fiaTimberIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_fs_fia_timber" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

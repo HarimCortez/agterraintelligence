@@ -279,6 +279,49 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
         )}
       </section>
 
+      {property.landUseType === "timber" && (
+        <section aria-label="County timber context" className="rounded border border-border-subtle bg-surface p-lg">
+          <h2 className="mb-sm text-lg font-semibold text-text-primary">County Timber Context</h2>
+          {property.timberSummary === null ? (
+            <p className="text-sm text-text-secondary">Not yet available.</p>
+          ) : (
+            <div className="flex flex-col gap-sm">
+              <p className="text-xs text-text-secondary">
+                {property.county} County-wide figures, not specific to this parcel.
+              </p>
+              <dl className="grid grid-cols-2 gap-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                    Timberland
+                  </dt>
+                  <dd className="text-sm text-text-primary">
+                    {property.timberSummary.countyTimberlandAcres !== null
+                      ? `${property.timberSummary.countyTimberlandAcres.toLocaleString("en-US")} ac`
+                      : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                    Timber volume density
+                  </dt>
+                  <dd className="text-sm text-text-primary">
+                    {property.timberSummary.countyTimberVolumeCuFtPerAcre !== null
+                      ? `${property.timberSummary.countyTimberVolumeCuFtPerAcre.toLocaleString("en-US")} cu ft/ac`
+                      : "—"}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-xs text-text-secondary">
+                Source: USDA Forest Service {property.timberSummary.year} Forest Inventory and Analysis (FIA)
+                program.
+                {property.timberSummary.countyTimberVolumeSamplingErrorPct !== null &&
+                  ` These are statistical estimates from a field-plot sample, not a full census — the volume figure carries a ±${Math.round(property.timberSummary.countyTimberVolumeSamplingErrorPct)}% margin of error for this county.`}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
       <AiAnalystPanel propertyId={id} />
 
       <section aria-label="Property location">
