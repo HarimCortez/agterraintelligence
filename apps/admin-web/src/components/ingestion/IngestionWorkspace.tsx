@@ -9,6 +9,7 @@ import {
   fetchAdminParcelRecords,
   triggerFemaFloodZoneRun,
   triggerFlParcelRun,
+  triggerUsdaSoilRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -20,11 +21,12 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the two real ingestion jobs that exist: FEMA
- * flood zone data and the FL DOR parcel cadastral sweep. See
- * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts` and
- * `apps/api/src/ingestion/fl-parcel-cadastral-ingestion.service.ts`'s doc
- * comments for why both are manually triggered rather than scheduled.
+ * admin manually trigger, the three real ingestion jobs that exist: FEMA
+ * flood zone data, the FL DOR parcel cadastral sweep, and USDA NRCS soil
+ * data. See `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
+ * `fl-parcel-cadastral-ingestion.service.ts`, and
+ * `usda-soil-ingestion.service.ts`'s doc comments for why all three are
+ * manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -79,6 +81,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerSoilMutation = useMutation({
+    mutationFn: () => triggerUsdaSoilRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -97,8 +108,8 @@ export function IngestionWorkspace() {
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Data Sources &amp; Ingestion</h1>
           <p className="text-sm text-text-secondary">
-            FEMA National Flood Hazard Layer and the Florida DOR parcel cadastral sweep — real, manually-triggered
-            ingestion runs. No other data sources have a live ingestion pipeline yet.
+            FEMA National Flood Hazard Layer, the Florida DOR parcel cadastral sweep, and USDA NRCS soil data — real,
+            manually-triggered ingestion runs. No other data sources have a live ingestion pipeline yet.
           </p>
         </div>
         <div className="flex shrink-0 gap-sm">
@@ -118,10 +129,18 @@ export function IngestionWorkspace() {
           >
             {triggerParcelMutation.isPending || runInProgress ? "Running…" : "Run FL Parcel Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerSoilMutation.isPending || runInProgress}
+            onClick={() => triggerSoilMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerSoilMutation.isPending || runInProgress ? "Running…" : "Run USDA Soil Sync"}
+          </button>
         </div>
       </header>
 
-      {[triggerFemaMutation, triggerParcelMutation].map(
+      {[triggerFemaMutation, triggerParcelMutation, triggerSoilMutation].map(
         (mutation, i) =>
           mutation.isError &&
           !(mutation.error instanceof ForbiddenError) && (
@@ -130,7 +149,7 @@ export function IngestionWorkspace() {
             </div>
           ),
       )}
-      {(triggerFemaMutation.isSuccess || triggerParcelMutation.isSuccess) && (
+      {(triggerFemaMutation.isSuccess || triggerParcelMutation.isSuccess || triggerSoilMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

@@ -4,6 +4,7 @@ import { AuditLogService } from "../common/audit/audit-log.service";
 import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { FemaFloodZoneIngestionService } from "../ingestion/fema-flood-zone-ingestion.service";
 import { FlParcelCadastralIngestionService } from "../ingestion/fl-parcel-cadastral-ingestion.service";
+import { UsdaSoilIngestionService } from "../ingestion/usda-soil-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -18,6 +19,7 @@ export class AdminIngestionService {
     private readonly prisma: PrismaService,
     private readonly femaIngestion: FemaFloodZoneIngestionService,
     private readonly flParcelIngestion: FlParcelCadastralIngestionService,
+    private readonly usdaSoilIngestion: UsdaSoilIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -62,6 +64,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "fl_dor_cadastral" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerUsdaSoilRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.usdaSoilIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_soil_data" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

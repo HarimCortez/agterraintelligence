@@ -477,6 +477,7 @@ model Property {
   opportunityScore OpportunityScore?
   valuation        PropertyValuation?
   riskFlags        PropertyRiskFlag[]
+  soilData         PropertySoilData?
   aiInteractions   AiInteraction[]
   watchlistItems   WatchlistItem[]
   reportOrders     ReportOrder[]
@@ -545,6 +546,48 @@ model PropertyRiskFlag {
   @@index([propertyId])
   @@index([severity])
   @@map("property_risk_flags")
+}
+
+// One-to-one with `properties`. Real USDA NRCS SSURGO soil survey data for
+// the property's actual coordinates (`properties.location`) — see
+// `apps/api/src/ingestion/usda-soil-ingestion.service.ts`'s doc comment.
+// Unlike the FL parcel cadastral data (kept in its own `ParcelRecord`
+// table, deliberately never merged into `properties`, because the
+// fabricated `askingPriceCents`/listing data shouldn't borrow credibility
+// from real data it's attached to) — this IS attached directly to
+// `properties`, matching the already-established precedent of
+// `PropertyRiskFlag`'s real FEMA flood-zone flags: soil type/drainage/slope
+// are physical facts about a real point on Earth, true regardless of
+// whether the "listing" at that point is real, so attaching them to the
+// (fabricated) listing doesn't manufacture false credibility the way
+// merging fabricated pricing into real parcel records would have.
+model PropertySoilData {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /** SSURGO map unit key — the stable identifier for the soil map unit at this point. */
+  mapUnitKey String @map("map_unit_key")
+  /** SSURGO map unit symbol, e.g. "19". */
+  mapUnitSymbol String @map("map_unit_symbol")
+  /** SSURGO map unit name, e.g. "Floridana, Placid, and Okeelanta soils, frequently flooded" — the closest thing to a "soil type" a non-specialist reads directly. */
+  mapUnitName String @map("map_unit_name") @db.Text
+
+  /** Dominant-condition drainage class, e.g. "Well drained", "Very poorly drained" (`muaggatt.drclassdcd`). */
+  drainageClass String? @map("drainage_class")
+  /** Dominant-condition flood frequency, e.g. "None", "Occasional", "Frequent" (`muaggatt.flodfreqdcd`). */
+  floodFrequency String? @map("flood_frequency")
+  /** Representative slope, percent (`muaggatt.slopegraddcp`). */
+  slopePercent Decimal? @db.Decimal(5, 2) @map("slope_percent")
+  /** Non-irrigated capability class, dominant condition, e.g. "3e", "4w" — USDA's 1 (best) to 8 (worst) cropland suitability scale, with a letter suffix for the limiting factor (`muaggatt.niccdcd`). */
+  capabilityClass String? @map("capability_class")
+  /** Percent of the map unit classified hydric (wetland-indicator soils), 0-100 (`muaggatt.hydclprs`). */
+  hydricPct Int? @map("hydric_pct")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@map("property_soil_data")
 }
 
 // ---------------------------------------------------------------------------

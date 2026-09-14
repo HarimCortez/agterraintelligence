@@ -39,6 +39,13 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     discountPct: "16.7",
     valuationConfidence: "modeled",
     riskFlags: [],
+    soilMapUnitSymbol: null,
+    soilMapUnitName: null,
+    soilDrainageClass: null,
+    soilFloodFrequency: null,
+    soilSlopePercent: null,
+    soilCapabilityClass: null,
+    soilHydricPct: null,
     ...overrides,
   };
 }

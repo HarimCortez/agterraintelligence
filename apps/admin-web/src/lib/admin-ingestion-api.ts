@@ -65,6 +65,12 @@ export async function triggerFlParcelRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerUsdaSoilRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/usda-soil/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the USDA soil data sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

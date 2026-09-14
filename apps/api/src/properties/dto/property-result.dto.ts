@@ -19,6 +19,17 @@ export interface PropertyRiskFlag {
   createdAt: string;
 }
 
+/** Real USDA NRCS SSURGO soil survey data at the property's coordinates — see `PropertySoilData` in schema.prisma. */
+export interface PropertySoilSummary {
+  mapUnitSymbol: string;
+  mapUnitName: string;
+  drainageClass: string | null;
+  floodFrequency: string | null;
+  slopePercent: number | null;
+  capabilityClass: string | null;
+  hydricPct: number | null;
+}
+
 export class PropertyResultDto {
   id!: string;
   address!: string;
@@ -50,6 +61,7 @@ export class PropertyDetailDto {
   opportunityScore!: PropertyOpportunitySummary | null;
   valuation!: PropertyValuationSummary | null;
   riskFlags!: PropertyRiskFlag[];
+  soilData!: PropertySoilSummary | null;
 }
 
 export class ListPropertiesResponseDto {

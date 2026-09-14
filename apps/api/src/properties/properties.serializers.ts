@@ -1,5 +1,5 @@
 import { LandUseType, ListingStatus, OpportunityBand, ValuationConfidence } from "@agterra/db";
-import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag } from "./dto/property-result.dto";
+import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary } from "./dto/property-result.dto";
 
 /**
  * Raw result row from the combined query. The query includes:
@@ -62,6 +62,14 @@ export interface RawPropertyDetailRow {
   valuationConfidence: string | null;
   // Risk flags
   riskFlags: PropertyRiskFlag[];
+  // Soil data (null if no PropertySoilData row exists for this property yet)
+  soilMapUnitSymbol: string | null;
+  soilMapUnitName: string | null;
+  soilDrainageClass: string | null;
+  soilFloodFrequency: string | null;
+  soilSlopePercent: string | null; // Decimal, stringified
+  soilCapabilityClass: string | null;
+  soilHydricPct: number | null;
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -164,6 +172,21 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
 
   // Risk flags
   result.riskFlags = row.riskFlags || [];
+
+  // Soil data (null if no PropertySoilData row exists for this property yet)
+  if (row.soilMapUnitSymbol !== null) {
+    result.soilData = {
+      mapUnitSymbol: row.soilMapUnitSymbol,
+      mapUnitName: row.soilMapUnitName!,
+      drainageClass: row.soilDrainageClass,
+      floodFrequency: row.soilFloodFrequency,
+      slopePercent: row.soilSlopePercent !== null ? parseFloat(row.soilSlopePercent) : null,
+      capabilityClass: row.soilCapabilityClass,
+      hydricPct: row.soilHydricPct,
+    } satisfies PropertySoilSummary;
+  } else {
+    result.soilData = null;
+  }
 
   return result;
 }

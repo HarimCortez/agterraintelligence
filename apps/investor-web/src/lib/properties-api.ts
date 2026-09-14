@@ -88,6 +88,17 @@ export interface PropertyRiskFlag {
   createdAt: string;
 }
 
+/** Real USDA NRCS SSURGO soil survey data at the property's coordinates. */
+export interface PropertySoilData {
+  mapUnitSymbol: string;
+  mapUnitName: string;
+  drainageClass: string | null;
+  floodFrequency: string | null;
+  slopePercent: number | null;
+  capabilityClass: string | null;
+  hydricPct: number | null;
+}
+
 export interface PropertyDetail {
   id: string;
   address: string;
@@ -107,6 +118,7 @@ export interface PropertyDetail {
     confidence: ValuationConfidence;
   } | null;
   riskFlags: PropertyRiskFlag[];
+  soilData: PropertySoilData | null;
 }
 
 export const BAND_OPTIONS: { value: OpportunityBand; label: string }[] = [

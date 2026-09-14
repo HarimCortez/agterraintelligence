@@ -91,6 +91,7 @@ export function buildUserPrompt(property: PropertyDetailDto, question: string | 
     opportunityScore: property.opportunityScore,
     valuation: property.valuation,
     riskFlags: property.riskFlags,
+    soilData: property.soilData,
   };
 
   const effectiveQuestion = question && question.trim().length > 0 ? question.trim() : DEFAULT_QUESTION;
@@ -140,6 +141,7 @@ export function buildTieredReportUserPrompt(property: PropertyDetailDto, tier: R
     opportunityScore: property.opportunityScore,
     valuation: property.valuation,
     riskFlags: property.riskFlags,
+    soilData: property.soilData,
   };
 
   const instruction = TIER_INSTRUCTIONS[tier];

@@ -4,6 +4,7 @@ import { AuditLogService } from "../common/audit/audit-log.service";
 import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { FemaFloodZoneIngestionService } from "../ingestion/fema-flood-zone-ingestion.service";
 import { FlParcelCadastralIngestionService } from "../ingestion/fl-parcel-cadastral-ingestion.service";
+import { UsdaSoilIngestionService } from "../ingestion/usda-soil-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -23,6 +24,7 @@ describe("AdminIngestionService", () => {
   };
   const femaIngestionMock = { trigger: jest.fn() };
   const flParcelIngestionMock = { trigger: jest.fn() };
+  const usdaSoilIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -33,6 +35,7 @@ describe("AdminIngestionService", () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: FemaFloodZoneIngestionService, useValue: femaIngestionMock },
         { provide: FlParcelCadastralIngestionService, useValue: flParcelIngestionMock },
+        { provide: UsdaSoilIngestionService, useValue: usdaSoilIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -116,6 +119,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-2",
           metadata: { source: "fl_dor_cadastral" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerUsdaSoilRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      usdaSoilIngestionMock.trigger.mockResolvedValue({ id: "run-3" });
+
+      const result = await service.triggerUsdaSoilRun(ADMIN);
+
+      expect(usdaSoilIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-3",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_soil_data source", async () => {
+      usdaSoilIngestionMock.trigger.mockResolvedValue({ id: "run-3" });
+
+      await service.triggerUsdaSoilRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-3",
+          metadata: { source: "usda_soil_data" },
         }),
       );
     });

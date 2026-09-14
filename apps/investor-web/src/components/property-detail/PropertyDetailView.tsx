@@ -171,6 +171,52 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
         )}
       </section>
 
+      <section aria-label="Soil data" className="rounded border border-border-subtle bg-surface p-lg">
+        <h2 className="mb-sm text-lg font-semibold text-text-primary">Soil Data</h2>
+        {property.soilData === null ? (
+          <p className="text-sm text-text-secondary">Not yet available.</p>
+        ) : (
+          <div className="flex flex-col gap-sm">
+            <p className="text-sm text-text-secondary">
+              <span className="font-semibold text-text-primary">{property.soilData.mapUnitName}</span>
+              {" "}
+              <span className="text-xs">(map unit {property.soilData.mapUnitSymbol})</span>
+            </p>
+            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Drainage
+                </dt>
+                <dd className="text-sm text-text-primary">{property.soilData.drainageClass ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Flood frequency
+                </dt>
+                <dd className="text-sm text-text-primary">{property.soilData.floodFrequency ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Slope
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.soilData.slopePercent !== null ? `${property.soilData.slopePercent}%` : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Capability class
+                </dt>
+                <dd className="text-sm text-text-primary">{property.soilData.capabilityClass ?? "—"}</dd>
+              </div>
+            </dl>
+            <p className="text-xs text-text-secondary">
+              Source: USDA NRCS Soil Survey Geographic Database (SSURGO).
+            </p>
+          </div>
+        )}
+      </section>
+
       <AiAnalystPanel propertyId={id} />
 
       <section aria-label="Property location">
