@@ -121,6 +121,14 @@ export interface PropertyTimberSummary {
   countyTimberVolumeSamplingErrorPct: number | null;
 }
 
+/** Real USDA RMA federal crop insurance Cause of Loss figures for the property's own COUNTY (not parcel-specific). */
+export interface PropertyCropLossSummary {
+  year: number;
+  countyTopCauseOfLoss: string | null;
+  countyTopCauseOfLossIndemnityCents: number | null;
+  countyTotalIndemnityCents: number | null;
+}
+
 export interface PropertyDetail {
   id: string;
   address: string;
@@ -144,6 +152,7 @@ export interface PropertyDetail {
   cropCover: PropertyCropCover | null;
   agCensusSummary: PropertyAgCensusSummary | null;
   timberSummary: PropertyTimberSummary | null;
+  cropLossSummary: PropertyCropLossSummary | null;
 }
 
 export const BAND_OPTIONS: { value: OpportunityBand; label: string }[] = [

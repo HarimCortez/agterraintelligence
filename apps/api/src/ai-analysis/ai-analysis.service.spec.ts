@@ -56,6 +56,10 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     timberCountyTimberlandAcres: null,
     timberCountyVolumeCuFtPerAcre: null,
     timberCountyVolumeSamplingErrorPct: null,
+    cropLossYear: null,
+    cropLossCountyTopCauseOfLoss: null,
+    cropLossCountyTopCauseOfLossIndemnityCents: null,
+    cropLossCountyTotalIndemnityCents: null,
     ...overrides,
   };
 }

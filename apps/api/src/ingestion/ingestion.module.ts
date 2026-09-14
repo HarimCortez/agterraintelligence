@@ -13,13 +13,15 @@ import { FlParcelClient } from "./fl-parcel-client";
 import { FlParcelCadastralIngestionService } from "./fl-parcel-cadastral-ingestion.service";
 import { NassAgCensusClient } from "./nass-ag-census-client";
 import { NassAgCensusIngestionService } from "./nass-ag-census-ingestion.service";
+import { RmaCauseOfLossClient } from "./rma-cause-of-loss-client";
+import { RmaCauseOfLossIngestionService } from "./rma-cause-of-loss-ingestion.service";
 import { UsdaSoilClient } from "./usda-soil-client";
 import { UsdaSoilIngestionService } from "./usda-soil-ingestion.service";
 import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Nine sources: FEMA flood zones
+ * Real external-data ingestion module. Ten sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -33,11 +35,14 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * Layer (see `CroplandCoverIngestionService`'s doc comment), the USDA
  * NASS Census of Agriculture (see `NassAgCensusIngestionService`'s doc
  * comment — sourced via a free bulk file rather than the live Quick
- * Stats API, which requires a registered key), and the USDA Forest
- * Service Forest Inventory and Analysis program (see
+ * Stats API, which requires a registered key), the USDA Forest Service
+ * Forest Inventory and Analysis program (see
  * `FiaTimberIngestionService`'s doc comment — a real, live, keyless JSON
- * API, unlike the NASS Census of Agriculture job it otherwise resembles).
- * Exports all nine ingestion services so `AdminIngestionModule` can
+ * API, unlike the NASS Census of Agriculture job it otherwise resembles),
+ * and the USDA Risk Management Agency's federal crop insurance Cause of
+ * Loss data (see `RmaCauseOfLossIngestionService`'s doc comment — like
+ * the FIA job, a real keyless bulk file with no gated API alternative).
+ * Exports all ten ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -63,6 +68,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     NassAgCensusIngestionService,
     FiaTimberClient,
     FiaTimberIngestionService,
+    RmaCauseOfLossClient,
+    RmaCauseOfLossIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -74,6 +81,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     CroplandCoverIngestionService,
     NassAgCensusIngestionService,
     FiaTimberIngestionService,
+    RmaCauseOfLossIngestionService,
   ],
 })
 export class IngestionModule {}

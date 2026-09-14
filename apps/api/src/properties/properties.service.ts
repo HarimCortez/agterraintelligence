@@ -248,7 +248,11 @@ export class PropertiesService {
         pts.year AS "timberYear",
         pts.county_timberland_acres AS "timberCountyTimberlandAcres",
         pts.county_timber_volume_cu_ft_per_acre AS "timberCountyVolumeCuFtPerAcre",
-        pts.county_timber_volume_sampling_error_pct AS "timberCountyVolumeSamplingErrorPct"
+        pts.county_timber_volume_sampling_error_pct AS "timberCountyVolumeSamplingErrorPct",
+        pcls.year AS "cropLossYear",
+        pcls.county_top_cause_of_loss AS "cropLossCountyTopCauseOfLoss",
+        pcls.county_top_cause_of_loss_indemnity_cents AS "cropLossCountyTopCauseOfLossIndemnityCents",
+        pcls.county_total_indemnity_cents AS "cropLossCountyTotalIndemnityCents"
       FROM properties p
       LEFT JOIN opportunity_scores os ON p.id = os.property_id
       LEFT JOIN property_valuations pv ON p.id = pv.property_id
@@ -257,6 +261,7 @@ export class PropertiesService {
       LEFT JOIN property_crop_cover pcc ON p.id = pcc.property_id
       LEFT JOIN property_ag_census_summary pacs ON p.id = pacs.property_id
       LEFT JOIN property_timber_summary pts ON p.id = pts.property_id
+      LEFT JOIN property_crop_loss_summary pcls ON p.id = pcls.property_id
       WHERE p.id = $1::uuid
       GROUP BY p.id, p.address, p.county, p.state, p.acreage, p.asking_price_cents,
                p.land_use_type, p.listing_status, p.location,
@@ -267,7 +272,9 @@ export class PropertiesService {
                pcc.year, pcc.crop_code, pcc.crop_description,
                pacs.year, pacs.county_cattle_inventory_head, pacs.county_ag_land_value_cents_per_acre,
                pts.year, pts.county_timberland_acres, pts.county_timber_volume_cu_ft_per_acre,
-               pts.county_timber_volume_sampling_error_pct
+               pts.county_timber_volume_sampling_error_pct,
+               pcls.year, pcls.county_top_cause_of_loss, pcls.county_top_cause_of_loss_indemnity_cents,
+               pcls.county_total_indemnity_cents
     `;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

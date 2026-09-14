@@ -52,6 +52,14 @@ export interface PropertyTimberSummaryDto {
   countyTimberVolumeSamplingErrorPct: number | null;
 }
 
+/** Real USDA RMA federal crop insurance Cause of Loss figures for the property's own COUNTY (not parcel-specific) — see `PropertyCropLossSummary` in schema.prisma. */
+export interface PropertyCropLossSummaryDto {
+  year: number;
+  countyTopCauseOfLoss: string | null;
+  countyTopCauseOfLossIndemnityCents: number | null;
+  countyTotalIndemnityCents: number | null;
+}
+
 export class PropertyResultDto {
   id!: string;
   address!: string;
@@ -87,6 +95,7 @@ export class PropertyDetailDto {
   cropCover!: PropertyCropCoverSummary | null;
   agCensusSummary!: PropertyAgCensusSummaryDto | null;
   timberSummary!: PropertyTimberSummaryDto | null;
+  cropLossSummary!: PropertyCropLossSummaryDto | null;
 }
 
 export class ListPropertiesResponseDto {

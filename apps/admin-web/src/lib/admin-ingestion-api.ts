@@ -107,6 +107,12 @@ export async function triggerFiaTimberRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerRmaCauseOfLossRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/rma-cause-of-loss/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the RMA cause of loss sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

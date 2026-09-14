@@ -11,6 +11,7 @@ import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
 import { FiaTimberIngestionService } from "../ingestion/fia-timber-ingestion.service";
+import { RmaCauseOfLossIngestionService } from "../ingestion/rma-cause-of-loss-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -32,6 +33,7 @@ export class AdminIngestionService {
     private readonly croplandCoverIngestion: CroplandCoverIngestionService,
     private readonly nassAgCensusIngestion: NassAgCensusIngestionService,
     private readonly fiaTimberIngestion: FiaTimberIngestionService,
+    private readonly rmaCauseOfLossIngestion: RmaCauseOfLossIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -181,6 +183,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_fs_fia_timber" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerRmaCauseOfLossRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.rmaCauseOfLossIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_rma_cause_of_loss" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

@@ -85,6 +85,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerFiaTimberRun(admin);
   }
 
+  @Post("rma-cause-of-loss/run")
+  @RequirePermission("ingestion.run")
+  triggerRmaCauseOfLossRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerRmaCauseOfLossRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

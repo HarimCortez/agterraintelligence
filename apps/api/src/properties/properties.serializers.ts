@@ -1,5 +1,5 @@
 import { LandUseType, ListingStatus, OpportunityBand, ValuationConfidence } from "@agterra/db";
-import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary, PropertyAgCensusSummaryDto, PropertyTimberSummaryDto } from "./dto/property-result.dto";
+import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary, PropertyAgCensusSummaryDto, PropertyTimberSummaryDto, PropertyCropLossSummaryDto } from "./dto/property-result.dto";
 
 /**
  * Raw result row from the combined query. The query includes:
@@ -86,6 +86,13 @@ export interface RawPropertyDetailRow {
   timberCountyTimberlandAcres: number | null;
   timberCountyVolumeCuFtPerAcre: number | null;
   timberCountyVolumeSamplingErrorPct: string | null; // Decimal, stringified
+  // Crop loss summary (null if no PropertyCropLossSummary row exists for this property yet).
+  // `cropLossYear` is the presence signal (always set when the row exists).
+  cropLossYear: number | null;
+  cropLossCountyTopCauseOfLoss: string | null;
+  // BIGINT columns — Prisma's raw queries return these as native JS `bigint`, not `number` (confirmed necessary live: a real county-year indemnity total in cents can exceed Postgres INT4's ~2.1 billion range, e.g. DeSoto's real 2024 total was 2,433,085,900 cents).
+  cropLossCountyTopCauseOfLossIndemnityCents: bigint | null;
+  cropLossCountyTotalIndemnityCents: bigint | null;
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -237,6 +244,22 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
     } satisfies PropertyTimberSummaryDto;
   } else {
     result.timberSummary = null;
+  }
+
+  // Crop loss summary (null if no PropertyCropLossSummary row exists for this property yet)
+  if (row.cropLossYear !== null) {
+    result.cropLossSummary = {
+      year: row.cropLossYear,
+      countyTopCauseOfLoss: row.cropLossCountyTopCauseOfLoss,
+      // Convert from bigint (real cents totals can exceed INT4, safely fit in JS's Number range) —
+      // a raw bigint can't be JSON-serialized as-is.
+      countyTopCauseOfLossIndemnityCents:
+        row.cropLossCountyTopCauseOfLossIndemnityCents !== null ? Number(row.cropLossCountyTopCauseOfLossIndemnityCents) : null,
+      countyTotalIndemnityCents:
+        row.cropLossCountyTotalIndemnityCents !== null ? Number(row.cropLossCountyTotalIndemnityCents) : null,
+    } satisfies PropertyCropLossSummaryDto;
+  } else {
+    result.cropLossSummary = null;
   }
 
   return result;

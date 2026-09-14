@@ -22,6 +22,7 @@ import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
 import { FiaTimberIngestionService } from "../ingestion/fia-timber-ingestion.service";
+import { RmaCauseOfLossIngestionService } from "../ingestion/rma-cause-of-loss-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -48,6 +49,7 @@ describe("AdminIngestionService", () => {
   const croplandCoverIngestionMock = { trigger: jest.fn() };
   const nassAgCensusIngestionMock = { trigger: jest.fn() };
   const fiaTimberIngestionMock = { trigger: jest.fn() };
+  const rmaCauseOfLossIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -65,6 +67,7 @@ describe("AdminIngestionService", () => {
         { provide: CroplandCoverIngestionService, useValue: croplandCoverIngestionMock },
         { provide: NassAgCensusIngestionService, useValue: nassAgCensusIngestionMock },
         { provide: FiaTimberIngestionService, useValue: fiaTimberIngestionMock },
+        { provide: RmaCauseOfLossIngestionService, useValue: rmaCauseOfLossIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -386,6 +389,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-9",
           metadata: { source: "usda_fs_fia_timber" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerRmaCauseOfLossRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      rmaCauseOfLossIngestionMock.trigger.mockResolvedValue({ id: "run-10" });
+
+      const result = await service.triggerRmaCauseOfLossRun(ADMIN);
+
+      expect(rmaCauseOfLossIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-10",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_rma_cause_of_loss source", async () => {
+      rmaCauseOfLossIngestionMock.trigger.mockResolvedValue({ id: "run-10" });
+
+      await service.triggerRmaCauseOfLossRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-10",
+          metadata: { source: "usda_rma_cause_of_loss" },
         }),
       );
     });

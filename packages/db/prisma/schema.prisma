@@ -481,6 +481,7 @@ model Property {
   cropCover        PropertyCropCover?
   agCensusSummary  PropertyAgCensusSummary?
   timberSummary    PropertyTimberSummary?
+  cropLossSummary  PropertyCropLossSummary?
   aiInteractions   AiInteraction[]
   watchlistItems   WatchlistItem[]
   reportOrders     ReportOrder[]
@@ -719,6 +720,54 @@ model PropertyTimberSummary {
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_timber_summary")
+}
+
+// One-to-one with `properties`. Real, county-level USDA Risk Management
+// Agency (RMA) federal crop insurance Cause of Loss data for the
+// property's own county — see
+// `apps/api/src/ingestion/rma-cause-of-loss-client.ts`'s doc comment for
+// how this was sourced. Like `PropertyTimberSummary`, this needed no
+// live-API workaround: RMA only ever publishes this as a real, keyless,
+// yearly bulk file (no gated API exists to fall back from), and unlike
+// NASS's ~300MB Census of Agriculture file, RMA's is a fast ~6MB
+// nationwide download.
+//
+// Same "county-wide, not parcel-specific" reasoning as
+// `PropertyAgCensusSummary`, and swept across every property the same
+// way (not scoped to one `landUseType` like `PropertyTimberSummary`) —
+// crop-loss risk context is relevant background for any agricultural
+// land regardless of its current listed use.
+//
+// `countyTopCauseOfLoss` deliberately excludes RMA's cause-of-loss code
+// 55 ("ARPI/SCO/ECO/STAX/MP/PACE Crops Only") from consideration even
+// though it's frequently the single largest dollar figure in the raw
+// data — confirmed live that this is RMA's catch-all bucket for
+// area/index-based insurance products (ARPI, STAX, etc.), where a loss
+// is triggered by a county-level revenue shortfall rather than
+// attributed to one physical peril. Presenting it next to "Freeze" or
+// "Drought" as if it were a weather event would misrepresent what
+// actually caused the loss, so it's dropped from the top-cause ranking;
+// `countyTotalIndemnityCents` still includes it, since that figure is
+// genuinely "how much was paid out," not a claim about why.
+model PropertyCropLossSummary {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /** The crop/commodity year this reading came from, e.g. 2024 — the most recent year RMA's data is substantially settled (a just-elapsed year's claims are often still being filed). */
+  year Int
+
+  /** The county's single largest cause of loss by indemnity paid that year, by physical peril (e.g. "Freeze", "Drought") — excludes RMA's non-peril insurance-product bucket (code 55). Null if the county had no qualifying claims that year. */
+  countyTopCauseOfLoss String? @map("county_top_cause_of_loss")
+  /** Indemnity paid for that top cause, in cents. `BigInt`, not `Int` — confirmed live that a real county-year total in cents can exceed Postgres INT4's ~2.1 billion range (e.g. DeSoto's real 2024 total was 2,433,085,900 cents). */
+  countyTopCauseOfLossIndemnityCents BigInt? @map("county_top_cause_of_loss_indemnity_cents")
+  /** Total indemnity paid across every cause of loss and every insured crop in the county that year, in cents — includes the non-peril insurance-product bucket excluded from the top-cause figure above. `BigInt` for the same real-overflow reason as the field above. */
+  countyTotalIndemnityCents BigInt? @map("county_total_indemnity_cents")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@map("property_crop_loss_summary")
 }
 
 // ---------------------------------------------------------------------------

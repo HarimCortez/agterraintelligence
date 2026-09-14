@@ -279,6 +279,56 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
         )}
       </section>
 
+      <section aria-label="County crop loss context" className="rounded border border-border-subtle bg-surface p-lg">
+        <h2 className="mb-sm text-lg font-semibold text-text-primary">County Crop Loss Context</h2>
+        {property.cropLossSummary === null ? (
+          <p className="text-sm text-text-secondary">Not yet available.</p>
+        ) : (
+          <div className="flex flex-col gap-sm">
+            <p className="text-xs text-text-secondary">
+              {property.county} County-wide figures, not specific to this parcel — real federal crop insurance
+              claims paid across every insured crop in the county that year.
+            </p>
+            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Top cause of loss
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.cropLossSummary.countyTopCauseOfLoss ?? "—"}
+                  {property.cropLossSummary.countyTopCauseOfLossIndemnityCents !== null &&
+                    ` (${(property.cropLossSummary.countyTopCauseOfLossIndemnityCents / 100).toLocaleString("en-US", {
+                      style: "currency",
+                      currency: "USD",
+                      maximumFractionDigits: 0,
+                    })} paid)`}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Total indemnity paid
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.cropLossSummary.countyTotalIndemnityCents !== null
+                    ? (property.cropLossSummary.countyTotalIndemnityCents / 100).toLocaleString("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      })
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+            <p className="text-xs text-text-secondary">
+              Source: USDA Risk Management Agency {property.cropLossSummary.year} Cause of Loss Summary of
+              Business. &quot;Top cause of loss&quot; excludes area/index insurance products (ARPI, STAX, etc.)
+              whose losses aren&apos;t attributed to one physical peril — the total indemnity figure still
+              includes them.
+            </p>
+          </div>
+        )}
+      </section>
+
       {property.landUseType === "timber" && (
         <section aria-label="County timber context" className="rounded border border-border-subtle bg-surface p-lg">
           <h2 className="mb-sm text-lg font-semibold text-text-primary">County Timber Context</h2>

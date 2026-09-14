@@ -16,6 +16,7 @@ import {
   triggerCroplandCoverRun,
   triggerNassAgCensusRun,
   triggerFiaTimberRun,
+  triggerRmaCauseOfLossRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -27,23 +28,25 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the nine real ingestion jobs that exist: FEMA
+ * admin manually trigger, the ten real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
  * Data Layer, the USDA NASS Census of Agriculture (this one runs
  * noticeably longer than the others — it streams and parses a ~300MB
  * bulk file rather than making a live per-property query, see
- * `nass-ag-census-ingestion.service.ts`'s doc comment), and the USDA
- * Forest Service Forest Inventory and Analysis program (timber
- * properties only — see `fia-timber-ingestion.service.ts`'s doc
- * comment). See
+ * `nass-ag-census-ingestion.service.ts`'s doc comment), the USDA Forest
+ * Service Forest Inventory and Analysis program (timber properties only
+ * — see `fia-timber-ingestion.service.ts`'s doc comment), and the USDA
+ * Risk Management Agency's federal crop insurance Cause of Loss data
+ * (see `rma-cause-of-loss-ingestion.service.ts`'s doc comment). See
  * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
  * `citrus-black-spot-ingestion.service.ts`, `cropland-cover-ingestion.service.ts`,
- * `nass-ag-census-ingestion.service.ts`, and `fia-timber-ingestion.service.ts`'s
- * doc comments for why all nine are manually triggered rather than scheduled.
+ * `nass-ag-census-ingestion.service.ts`, `fia-timber-ingestion.service.ts`, and
+ * `rma-cause-of-loss-ingestion.service.ts`'s doc comments for why all ten
+ * are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -161,6 +164,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerCropLossMutation = useMutation({
+    mutationFn: () => triggerRmaCauseOfLossRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -257,6 +269,14 @@ export function IngestionWorkspace() {
           >
             {triggerTimberMutation.isPending || runInProgress ? "Running…" : "Run FIA Timber Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerCropLossMutation.isPending || runInProgress}
+            onClick={() => triggerCropLossMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerCropLossMutation.isPending || runInProgress ? "Running…" : "Run RMA Cause of Loss Sync"}
+          </button>
         </div>
       </header>
 
@@ -270,6 +290,7 @@ export function IngestionWorkspace() {
         triggerCropCoverMutation,
         triggerAgCensusMutation,
         triggerTimberMutation,
+        triggerCropLossMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -287,7 +308,8 @@ export function IngestionWorkspace() {
         triggerBlackSpotMutation.isSuccess ||
         triggerCropCoverMutation.isSuccess ||
         triggerAgCensusMutation.isSuccess ||
-        triggerTimberMutation.isSuccess) && (
+        triggerTimberMutation.isSuccess ||
+        triggerCropLossMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>
