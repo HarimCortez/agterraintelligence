@@ -73,6 +73,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerCroplandCoverRun(admin);
   }
 
+  @Post("nass-ag-census/run")
+  @RequirePermission("ingestion.run")
+  triggerNassAgCensusRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerNassAgCensusRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

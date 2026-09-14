@@ -14,6 +14,7 @@ import {
   triggerCitrusQuarantineRun,
   triggerCitrusBlackSpotRun,
   triggerCroplandCoverRun,
+  triggerNassAgCensusRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -25,16 +26,19 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the seven real ingestion jobs that exist: FEMA
+ * admin manually trigger, the eight real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
- * USDA APHIS Citrus Black Spot quarantine data, and the USDA NASS Cropland
- * Data Layer. See
+ * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
+ * Data Layer, and the USDA NASS Census of Agriculture (this last one runs
+ * noticeably longer than the others — it streams and parses a ~300MB
+ * bulk file rather than making a live per-property query, see
+ * `nass-ag-census-ingestion.service.ts`'s doc comment). See
  * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
- * `citrus-black-spot-ingestion.service.ts`, and
- * `cropland-cover-ingestion.service.ts`'s doc comments for why all seven
+ * `citrus-black-spot-ingestion.service.ts`, `cropland-cover-ingestion.service.ts`,
+ * and `nass-ag-census-ingestion.service.ts`'s doc comments for why all eight
  * are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
@@ -135,6 +139,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerAgCensusMutation = useMutation({
+    mutationFn: () => triggerNassAgCensusRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -215,6 +228,14 @@ export function IngestionWorkspace() {
           >
             {triggerCropCoverMutation.isPending || runInProgress ? "Running…" : "Run Cropland Cover Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerAgCensusMutation.isPending || runInProgress}
+            onClick={() => triggerAgCensusMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerAgCensusMutation.isPending || runInProgress ? "Running…" : "Run NASS Ag Census Sync"}
+          </button>
         </div>
       </header>
 
@@ -226,6 +247,7 @@ export function IngestionWorkspace() {
         triggerCitrusMutation,
         triggerBlackSpotMutation,
         triggerCropCoverMutation,
+        triggerAgCensusMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -241,7 +263,8 @@ export function IngestionWorkspace() {
         triggerWetlandsMutation.isSuccess ||
         triggerCitrusMutation.isSuccess ||
         triggerBlackSpotMutation.isSuccess ||
-        triggerCropCoverMutation.isSuccess) && (
+        triggerCropCoverMutation.isSuccess ||
+        triggerAgCensusMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

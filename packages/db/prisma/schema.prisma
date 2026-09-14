@@ -479,6 +479,7 @@ model Property {
   riskFlags        PropertyRiskFlag[]
   soilData         PropertySoilData?
   cropCover        PropertyCropCover?
+  agCensusSummary  PropertyAgCensusSummary?
   aiInteractions   AiInteraction[]
   watchlistItems   WatchlistItem[]
   reportOrders     ReportOrder[]
@@ -625,6 +626,46 @@ model PropertyCropCover {
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_crop_cover")
+}
+
+// One-to-one with `properties`. Real, county-level USDA NASS Census of
+// Agriculture figures for the property's own county — see
+// `apps/api/src/ingestion/nass-ag-census-client.ts`'s doc comment for how
+// this was sourced (NASS's free, keyless bulk data files, after the live
+// Quick Stats API turned out to require a registered API key delivered by
+// email — the first source in this project without a keyless path; every
+// prior USDA/USFWS/FEMA source used here needed no registration at all).
+//
+// Deliberately narrow and deliberately NOT a parcel-level fact like
+// `PropertySoilData`/`PropertyCropCover`: this is the same county-wide
+// average attached to every property in that county, not something
+// specific to this exact point. Scoped to the Census of Agriculture
+// (published every 5 years: 2022, 2017, 2012...) because that's the only
+// program with COUNTY-granularity for these figures — confirmed live that
+// the annual Survey program (the one that would give a fresher, non-Census
+// year) only publishes Florida citrus yield/price/production at
+// STATE/NATIONAL level, not county. Cattle inventory scoped to
+// `domain_desc = "TOTAL"` and land value to the county-wide average across
+// all agricultural land uses pooled together (irrigated, cropland,
+// pastureland, timber, etc.) — a rough county benchmark for comparison,
+// not a same-land-use appraisal comp.
+model PropertyAgCensusSummary {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /** The Census of Agriculture year this reading came from, e.g. 2022. */
+  year Int
+
+  /** County-wide cattle (incl. calves) inventory, in head — null if NASS withheld the county total for disclosure reasons. */
+  countyCattleInventoryHead Int? @map("county_cattle_inventory_head")
+  /** County-wide average agricultural land (incl. buildings) value, in cents per acre, pooled across all land uses — null if NASS withheld the county total. */
+  countyAgLandValueCentsPerAcre Int? @map("county_ag_land_value_cents_per_acre")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@map("property_ag_census_summary")
 }
 
 // ---------------------------------------------------------------------------

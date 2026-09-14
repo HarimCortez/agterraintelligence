@@ -20,6 +20,7 @@ import { WetlandsIngestionService } from "../ingestion/wetlands-ingestion.servic
 import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine-ingestion.service";
 import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-ingestion.service";
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
+import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -44,6 +45,7 @@ describe("AdminIngestionService", () => {
   const citrusQuarantineIngestionMock = { trigger: jest.fn() };
   const citrusBlackSpotIngestionMock = { trigger: jest.fn() };
   const croplandCoverIngestionMock = { trigger: jest.fn() };
+  const nassAgCensusIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -59,6 +61,7 @@ describe("AdminIngestionService", () => {
         { provide: CitrusQuarantineIngestionService, useValue: citrusQuarantineIngestionMock },
         { provide: CitrusBlackSpotIngestionService, useValue: citrusBlackSpotIngestionMock },
         { provide: CroplandCoverIngestionService, useValue: croplandCoverIngestionMock },
+        { provide: NassAgCensusIngestionService, useValue: nassAgCensusIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -312,6 +315,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-6",
           metadata: { source: "usda_nass_cropland_data_layer" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerNassAgCensusRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      nassAgCensusIngestionMock.trigger.mockResolvedValue({ id: "run-8" });
+
+      const result = await service.triggerNassAgCensusRun(ADMIN);
+
+      expect(nassAgCensusIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-8",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_nass_ag_census source", async () => {
+      nassAgCensusIngestionMock.trigger.mockResolvedValue({ id: "run-8" });
+
+      await service.triggerNassAgCensusRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-8",
+          metadata: { source: "usda_nass_ag_census" },
         }),
       );
     });

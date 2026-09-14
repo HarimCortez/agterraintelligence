@@ -106,6 +106,13 @@ export interface PropertyCropCover {
   cropDescription: string;
 }
 
+/** Real USDA NASS Census of Agriculture figures for the property's own COUNTY (not parcel-specific). */
+export interface PropertyAgCensusSummary {
+  year: number;
+  countyCattleInventoryHead: number | null;
+  countyAgLandValueCentsPerAcre: number | null;
+}
+
 export interface PropertyDetail {
   id: string;
   address: string;
@@ -127,6 +134,7 @@ export interface PropertyDetail {
   riskFlags: PropertyRiskFlag[];
   soilData: PropertySoilData | null;
   cropCover: PropertyCropCover | null;
+  agCensusSummary: PropertyAgCensusSummary | null;
 }
 
 export const BAND_OPTIONS: { value: OpportunityBand; label: string }[] = [

@@ -37,6 +37,13 @@ export interface PropertyCropCoverSummary {
   cropDescription: string;
 }
 
+/** Real USDA NASS Census of Agriculture figures for the property's own COUNTY (not parcel-specific) — see `PropertyAgCensusSummary` in schema.prisma. */
+export interface PropertyAgCensusSummaryDto {
+  year: number;
+  countyCattleInventoryHead: number | null;
+  countyAgLandValueCentsPerAcre: number | null;
+}
+
 export class PropertyResultDto {
   id!: string;
   address!: string;
@@ -70,6 +77,7 @@ export class PropertyDetailDto {
   riskFlags!: PropertyRiskFlag[];
   soilData!: PropertySoilSummary | null;
   cropCover!: PropertyCropCoverSummary | null;
+  agCensusSummary!: PropertyAgCensusSummaryDto | null;
 }
 
 export class ListPropertiesResponseDto {

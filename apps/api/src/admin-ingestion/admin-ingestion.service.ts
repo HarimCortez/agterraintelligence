@@ -9,6 +9,7 @@ import { WetlandsIngestionService } from "../ingestion/wetlands-ingestion.servic
 import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine-ingestion.service";
 import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-ingestion.service";
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
+import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -28,6 +29,7 @@ export class AdminIngestionService {
     private readonly citrusQuarantineIngestion: CitrusQuarantineIngestionService,
     private readonly citrusBlackSpotIngestion: CitrusBlackSpotIngestionService,
     private readonly croplandCoverIngestion: CroplandCoverIngestionService,
+    private readonly nassAgCensusIngestion: NassAgCensusIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -147,6 +149,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_nass_cropland_data_layer" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerNassAgCensusRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.nassAgCensusIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_nass_ag_census" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

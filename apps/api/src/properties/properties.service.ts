@@ -241,13 +241,17 @@ export class PropertiesService {
         psd.hydric_pct AS "soilHydricPct",
         pcc.year AS "cropCoverYear",
         pcc.crop_code AS "cropCoverCropCode",
-        pcc.crop_description AS "cropCoverDescription"
+        pcc.crop_description AS "cropCoverDescription",
+        pacs.year AS "agCensusYear",
+        pacs.county_cattle_inventory_head AS "agCensusCountyCattleInventoryHead",
+        pacs.county_ag_land_value_cents_per_acre AS "agCensusCountyAgLandValueCentsPerAcre"
       FROM properties p
       LEFT JOIN opportunity_scores os ON p.id = os.property_id
       LEFT JOIN property_valuations pv ON p.id = pv.property_id
       LEFT JOIN property_risk_flags prf ON p.id = prf.property_id
       LEFT JOIN property_soil_data psd ON p.id = psd.property_id
       LEFT JOIN property_crop_cover pcc ON p.id = pcc.property_id
+      LEFT JOIN property_ag_census_summary pacs ON p.id = pacs.property_id
       WHERE p.id = $1::uuid
       GROUP BY p.id, p.address, p.county, p.state, p.acreage, p.asking_price_cents,
                p.land_use_type, p.listing_status, p.location,
@@ -255,7 +259,8 @@ export class PropertiesService {
                pv.discount_pct, pv.confidence,
                psd.map_unit_symbol, psd.map_unit_name, psd.drainage_class,
                psd.flood_frequency, psd.slope_percent, psd.capability_class, psd.hydric_pct,
-               pcc.year, pcc.crop_code, pcc.crop_description
+               pcc.year, pcc.crop_code, pcc.crop_description,
+               pacs.year, pacs.county_cattle_inventory_head, pacs.county_ag_land_value_cents_per_acre
     `;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

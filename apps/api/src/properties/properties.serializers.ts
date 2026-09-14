@@ -1,5 +1,5 @@
 import { LandUseType, ListingStatus, OpportunityBand, ValuationConfidence } from "@agterra/db";
-import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary } from "./dto/property-result.dto";
+import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary, PropertyAgCensusSummaryDto } from "./dto/property-result.dto";
 
 /**
  * Raw result row from the combined query. The query includes:
@@ -74,6 +74,12 @@ export interface RawPropertyDetailRow {
   cropCoverYear: number | null;
   cropCoverCropCode: number | null;
   cropCoverDescription: string | null;
+  // Ag census summary (null if no PropertyAgCensusSummary row exists for this property yet).
+  // `agCensusYear` is the presence signal (always set when the row exists) — the two figures
+  // themselves are independently nullable (NASS can withhold either one for disclosure reasons).
+  agCensusYear: number | null;
+  agCensusCountyCattleInventoryHead: number | null;
+  agCensusCountyAgLandValueCentsPerAcre: number | null;
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -201,6 +207,17 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
     } satisfies PropertyCropCoverSummary;
   } else {
     result.cropCover = null;
+  }
+
+  // Ag census summary (null if no PropertyAgCensusSummary row exists for this property yet)
+  if (row.agCensusYear !== null) {
+    result.agCensusSummary = {
+      year: row.agCensusYear,
+      countyCattleInventoryHead: row.agCensusCountyCattleInventoryHead,
+      countyAgLandValueCentsPerAcre: row.agCensusCountyAgLandValueCentsPerAcre,
+    } satisfies PropertyAgCensusSummaryDto;
+  } else {
+    result.agCensusSummary = null;
   }
 
   return result;

@@ -9,13 +9,15 @@ import { FemaFloodZoneClient } from "./fema-flood-zone-client";
 import { FemaFloodZoneIngestionService } from "./fema-flood-zone-ingestion.service";
 import { FlParcelClient } from "./fl-parcel-client";
 import { FlParcelCadastralIngestionService } from "./fl-parcel-cadastral-ingestion.service";
+import { NassAgCensusClient } from "./nass-ag-census-client";
+import { NassAgCensusIngestionService } from "./nass-ag-census-ingestion.service";
 import { UsdaSoilClient } from "./usda-soil-client";
 import { UsdaSoilIngestionService } from "./usda-soil-ingestion.service";
 import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Seven sources: FEMA flood zones
+ * Real external-data ingestion module. Eight sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -25,12 +27,14 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * Black Spot quarantine data (see `CitrusBlackSpotIngestionService`'s
  * doc comment — a separate program from HLB, on the same underlying
  * federal quarantine dataset but requiring a genuine per-point spatial
- * query rather than a per-county lookup), and the USDA NASS Cropland
- * Data Layer (see `CroplandCoverIngestionService`'s doc comment).
- * Exports all seven ingestion services so `AdminIngestionModule` can
- * trigger runs without this module owning any admin-facing HTTP surface
- * itself — same separation
- * `MonetizationModule`/`AdminReportFulfillmentModule` use for
+ * query rather than a per-county lookup), the USDA NASS Cropland Data
+ * Layer (see `CroplandCoverIngestionService`'s doc comment), and the
+ * USDA NASS Census of Agriculture (see `NassAgCensusIngestionService`'s
+ * doc comment — sourced via a free bulk file rather than the live Quick
+ * Stats API, which requires a registered key). Exports all eight
+ * ingestion services so `AdminIngestionModule` can trigger runs without
+ * this module owning any admin-facing HTTP surface itself — same
+ * separation `MonetizationModule`/`AdminReportFulfillmentModule` use for
  * `ReportGenerationService`.
  */
 @Module({
@@ -49,6 +53,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     CitrusBlackSpotIngestionService,
     CroplandDataClient,
     CroplandCoverIngestionService,
+    NassAgCensusClient,
+    NassAgCensusIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -58,6 +64,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     CitrusQuarantineIngestionService,
     CitrusBlackSpotIngestionService,
     CroplandCoverIngestionService,
+    NassAgCensusIngestionService,
   ],
 })
 export class IngestionModule {}

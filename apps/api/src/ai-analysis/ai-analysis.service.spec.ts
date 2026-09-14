@@ -49,6 +49,9 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     cropCoverYear: null,
     cropCoverCropCode: null,
     cropCoverDescription: null,
+    agCensusYear: null,
+    agCensusCountyCattleInventoryHead: null,
+    agCensusCountyAgLandValueCentsPerAcre: null,
     ...overrides,
   };
 }

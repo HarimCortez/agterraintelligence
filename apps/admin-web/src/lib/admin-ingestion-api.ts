@@ -95,6 +95,12 @@ export async function triggerCroplandCoverRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerNassAgCensusRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/nass-ag-census/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the NASS ag census sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

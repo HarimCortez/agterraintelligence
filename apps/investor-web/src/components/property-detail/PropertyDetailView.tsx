@@ -236,6 +236,49 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
         )}
       </section>
 
+      <section aria-label="County agricultural context" className="rounded border border-border-subtle bg-surface p-lg">
+        <h2 className="mb-sm text-lg font-semibold text-text-primary">County Agricultural Context</h2>
+        {property.agCensusSummary === null ? (
+          <p className="text-sm text-text-secondary">Not yet available.</p>
+        ) : (
+          <div className="flex flex-col gap-sm">
+            <p className="text-xs text-text-secondary">
+              {property.county} County-wide figures, not specific to this parcel — pooled across every agricultural
+              land use in the county.
+            </p>
+            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Avg. ag land value
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.agCensusSummary.countyAgLandValueCentsPerAcre !== null
+                    ? `${(property.agCensusSummary.countyAgLandValueCentsPerAcre / 100).toLocaleString("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      })} / acre`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Cattle inventory
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.agCensusSummary.countyCattleInventoryHead !== null
+                    ? `${property.agCensusSummary.countyCattleInventoryHead.toLocaleString("en-US")} head`
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+            <p className="text-xs text-text-secondary">
+              Source: USDA NASS {property.agCensusSummary.year} Census of Agriculture — published every 5 years.
+            </p>
+          </div>
+        )}
+      </section>
+
       <AiAnalystPanel propertyId={id} />
 
       <section aria-label="Property location">
