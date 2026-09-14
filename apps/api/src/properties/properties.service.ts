@@ -238,19 +238,24 @@ export class PropertiesService {
         psd.flood_frequency AS "soilFloodFrequency",
         psd.slope_percent AS "soilSlopePercent",
         psd.capability_class AS "soilCapabilityClass",
-        psd.hydric_pct AS "soilHydricPct"
+        psd.hydric_pct AS "soilHydricPct",
+        pcc.year AS "cropCoverYear",
+        pcc.crop_code AS "cropCoverCropCode",
+        pcc.crop_description AS "cropCoverDescription"
       FROM properties p
       LEFT JOIN opportunity_scores os ON p.id = os.property_id
       LEFT JOIN property_valuations pv ON p.id = pv.property_id
       LEFT JOIN property_risk_flags prf ON p.id = prf.property_id
       LEFT JOIN property_soil_data psd ON p.id = psd.property_id
+      LEFT JOIN property_crop_cover pcc ON p.id = pcc.property_id
       WHERE p.id = $1::uuid
       GROUP BY p.id, p.address, p.county, p.state, p.acreage, p.asking_price_cents,
                p.land_use_type, p.listing_status, p.location,
                os.id, os.score, os.band, pv.id, pv.estimated_value_cents,
                pv.discount_pct, pv.confidence,
                psd.map_unit_symbol, psd.map_unit_name, psd.drainage_class,
-               psd.flood_frequency, psd.slope_percent, psd.capability_class, psd.hydric_pct
+               psd.flood_frequency, psd.slope_percent, psd.capability_class, psd.hydric_pct,
+               pcc.year, pcc.crop_code, pcc.crop_description
     `;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

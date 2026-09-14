@@ -99,6 +99,13 @@ export interface PropertySoilData {
   hydricPct: number | null;
 }
 
+/** Real USDA NASS Cropland Data Layer satellite classification at the property's coordinates. */
+export interface PropertyCropCover {
+  year: number;
+  cropCode: number;
+  cropDescription: string;
+}
+
 export interface PropertyDetail {
   id: string;
   address: string;
@@ -119,6 +126,7 @@ export interface PropertyDetail {
   } | null;
   riskFlags: PropertyRiskFlag[];
   soilData: PropertySoilData | null;
+  cropCover: PropertyCropCover | null;
 }
 
 export const BAND_OPTIONS: { value: OpportunityBand; label: string }[] = [

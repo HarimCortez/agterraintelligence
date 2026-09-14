@@ -478,6 +478,7 @@ model Property {
   valuation        PropertyValuation?
   riskFlags        PropertyRiskFlag[]
   soilData         PropertySoilData?
+  cropCover        PropertyCropCover?
   aiInteractions   AiInteraction[]
   watchlistItems   WatchlistItem[]
   reportOrders     ReportOrder[]
@@ -588,6 +589,42 @@ model PropertySoilData {
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_soil_data")
+}
+
+// One-to-one with `properties`. The real USDA NASS Cropland Data Layer (CDL)
+// classification at the property's coordinates for the most recent year
+// published for that location — see
+// `apps/api/src/ingestion/cropland-data-client.ts`'s doc comment for how
+// this was sourced (Microsoft Planetary Computer's free, keyless hosting
+// of the same public-domain USDA data, after Google Earth Engine turned
+// out to require a paid commercial plan and the USDA's own direct query
+// API turned out to have an expired TLS certificate). Same
+// never-merge-into-`properties` reasoning as `PropertySoilData`: this is a
+// physical, satellite-observed fact about the point, independent of
+// whether the listing there is real.
+//
+// Deliberately NOT reconciled against `properties.land_use_type` — the
+// CDL's ~130 categories don't map cleanly onto that 6-value enum, and a
+// lossy translation would misrepresent what the satellite actually saw.
+// Shown alongside the self-reported land use instead, so a reader can
+// compare "Listed: Citrus" against "USDA satellite (2021): Oranges"
+// themselves.
+model PropertyCropCover {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /** The CDL classification year this reading came from — the most recent year with published coverage for this exact point, not necessarily the current calendar year. */
+  year Int
+  /** Raw CDL class code, e.g. 212. */
+  cropCode Int @map("crop_code")
+  /** Human-readable class name, e.g. "Oranges" — read directly from the source's own per-tile classification metadata, not a hand-maintained lookup table. */
+  cropDescription String @map("crop_description") @db.Text
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@map("property_crop_cover")
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import {
   triggerUsdaSoilRun,
   triggerWetlandsRun,
   triggerCitrusQuarantineRun,
+  triggerCroplandCoverRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -23,13 +24,15 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the five real ingestion jobs that exist: FEMA
+ * admin manually trigger, the six real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
- * USFWS wetlands data, and USDA APHIS citrus greening quarantine data. See
+ * USFWS wetlands data, USDA APHIS citrus greening quarantine data, and the
+ * USDA NASS Cropland Data Layer. See
  * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
- * `wetlands-ingestion.service.ts`, and `citrus-quarantine-ingestion.service.ts`'s
- * doc comments for why all five are manually triggered rather than scheduled.
+ * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
+ * and `cropland-cover-ingestion.service.ts`'s doc comments for why all six
+ * are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -111,6 +114,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerCropCoverMutation = useMutation({
+    mutationFn: () => triggerCroplandCoverRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -175,10 +187,25 @@ export function IngestionWorkspace() {
           >
             {triggerCitrusMutation.isPending || runInProgress ? "Running…" : "Run Citrus Quarantine Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerCropCoverMutation.isPending || runInProgress}
+            onClick={() => triggerCropCoverMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerCropCoverMutation.isPending || runInProgress ? "Running…" : "Run Cropland Cover Sync"}
+          </button>
         </div>
       </header>
 
-      {[triggerFemaMutation, triggerParcelMutation, triggerSoilMutation, triggerWetlandsMutation, triggerCitrusMutation].map(
+      {[
+        triggerFemaMutation,
+        triggerParcelMutation,
+        triggerSoilMutation,
+        triggerWetlandsMutation,
+        triggerCitrusMutation,
+        triggerCropCoverMutation,
+      ].map(
         (mutation, i) =>
           mutation.isError &&
           !(mutation.error instanceof ForbiddenError) && (
@@ -191,7 +218,8 @@ export function IngestionWorkspace() {
         triggerParcelMutation.isSuccess ||
         triggerSoilMutation.isSuccess ||
         triggerWetlandsMutation.isSuccess ||
-        triggerCitrusMutation.isSuccess) && (
+        triggerCitrusMutation.isSuccess ||
+        triggerCropCoverMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

@@ -61,6 +61,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerCitrusQuarantineRun(admin);
   }
 
+  @Post("cropland-cover/run")
+  @RequirePermission("ingestion.run")
+  triggerCroplandCoverRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerCroplandCoverRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

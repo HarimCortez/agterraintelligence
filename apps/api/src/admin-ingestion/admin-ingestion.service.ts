@@ -7,6 +7,7 @@ import { FlParcelCadastralIngestionService } from "../ingestion/fl-parcel-cadast
 import { UsdaSoilIngestionService } from "../ingestion/usda-soil-ingestion.service";
 import { WetlandsIngestionService } from "../ingestion/wetlands-ingestion.service";
 import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine-ingestion.service";
+import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -24,6 +25,7 @@ export class AdminIngestionService {
     private readonly usdaSoilIngestion: UsdaSoilIngestionService,
     private readonly wetlandsIngestion: WetlandsIngestionService,
     private readonly citrusQuarantineIngestion: CitrusQuarantineIngestionService,
+    private readonly croplandCoverIngestion: CroplandCoverIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -113,6 +115,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_citrus_quarantine" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerCroplandCoverRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.croplandCoverIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_nass_cropland_data_layer" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

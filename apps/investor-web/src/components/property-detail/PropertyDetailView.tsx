@@ -217,6 +217,25 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
         )}
       </section>
 
+      <section aria-label="Crop cover" className="rounded border border-border-subtle bg-surface p-lg">
+        <h2 className="mb-sm text-lg font-semibold text-text-primary">Crop Cover</h2>
+        {property.cropCover === null ? (
+          <p className="text-sm text-text-secondary">Not yet available.</p>
+        ) : (
+          <div className="flex flex-col gap-sm">
+            <p className="text-sm text-text-secondary">
+              <span className="font-semibold text-text-primary">{property.cropCover.cropDescription}</span>
+              {" "}
+              <span className="text-xs">({property.cropCover.year} classification)</span>
+            </p>
+            <p className="text-xs text-text-secondary">
+              Source: USDA NASS Cropland Data Layer — satellite-observed, not self-reported. Compare against the
+              listed land use above.
+            </p>
+          </div>
+        )}
+      </section>
+
       <AiAnalystPanel propertyId={id} />
 
       <section aria-label="Property location">

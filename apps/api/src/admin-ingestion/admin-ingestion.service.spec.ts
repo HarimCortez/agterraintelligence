@@ -1,4 +1,15 @@
 import { Test } from "@nestjs/testing";
+
+// `cropland-data-client.ts` (pulled in transitively via
+// `CroplandCoverIngestionService`) statically imports the real
+// ESM-only-published `geotiff`/`proj4` packages, which Jest's CJS transform
+// can't parse. This suite only exercises `AdminIngestionService` against a
+// mocked `CroplandCoverIngestionService`, never the real client, so stub
+// both modules before anything imports it — see the identical comment in
+// `../ingestion/cropland-cover-ingestion.service.spec.ts`.
+jest.mock("geotiff", () => ({ fromUrl: jest.fn() }));
+jest.mock("proj4", () => Object.assign(jest.fn(), { defs: jest.fn() }));
+
 import { PrismaService } from "../common/prisma/prisma.service";
 import { AuditLogService } from "../common/audit/audit-log.service";
 import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
@@ -7,6 +18,7 @@ import { FlParcelCadastralIngestionService } from "../ingestion/fl-parcel-cadast
 import { UsdaSoilIngestionService } from "../ingestion/usda-soil-ingestion.service";
 import { WetlandsIngestionService } from "../ingestion/wetlands-ingestion.service";
 import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine-ingestion.service";
+import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -29,6 +41,7 @@ describe("AdminIngestionService", () => {
   const usdaSoilIngestionMock = { trigger: jest.fn() };
   const wetlandsIngestionMock = { trigger: jest.fn() };
   const citrusQuarantineIngestionMock = { trigger: jest.fn() };
+  const croplandCoverIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -42,6 +55,7 @@ describe("AdminIngestionService", () => {
         { provide: UsdaSoilIngestionService, useValue: usdaSoilIngestionMock },
         { provide: WetlandsIngestionService, useValue: wetlandsIngestionMock },
         { provide: CitrusQuarantineIngestionService, useValue: citrusQuarantineIngestionMock },
+        { provide: CroplandCoverIngestionService, useValue: croplandCoverIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -227,6 +241,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-5",
           metadata: { source: "usda_aphis_citrus_quarantine" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerCroplandCoverRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      croplandCoverIngestionMock.trigger.mockResolvedValue({ id: "run-6" });
+
+      const result = await service.triggerCroplandCoverRun(ADMIN);
+
+      expect(croplandCoverIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-6",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_nass_cropland_data_layer source", async () => {
+      croplandCoverIngestionMock.trigger.mockResolvedValue({ id: "run-6" });
+
+      await service.triggerCroplandCoverRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-6",
+          metadata: { source: "usda_nass_cropland_data_layer" },
         }),
       );
     });

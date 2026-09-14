@@ -30,6 +30,13 @@ export interface PropertySoilSummary {
   hydricPct: number | null;
 }
 
+/** Real USDA NASS Cropland Data Layer satellite classification at the property's coordinates — see `PropertyCropCover` in schema.prisma. */
+export interface PropertyCropCoverSummary {
+  year: number;
+  cropCode: number;
+  cropDescription: string;
+}
+
 export class PropertyResultDto {
   id!: string;
   address!: string;
@@ -62,6 +69,7 @@ export class PropertyDetailDto {
   valuation!: PropertyValuationSummary | null;
   riskFlags!: PropertyRiskFlag[];
   soilData!: PropertySoilSummary | null;
+  cropCover!: PropertyCropCoverSummary | null;
 }
 
 export class ListPropertiesResponseDto {

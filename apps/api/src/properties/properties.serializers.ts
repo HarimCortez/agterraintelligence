@@ -1,5 +1,5 @@
 import { LandUseType, ListingStatus, OpportunityBand, ValuationConfidence } from "@agterra/db";
-import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary } from "./dto/property-result.dto";
+import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary } from "./dto/property-result.dto";
 
 /**
  * Raw result row from the combined query. The query includes:
@@ -70,6 +70,10 @@ export interface RawPropertyDetailRow {
   soilSlopePercent: string | null; // Decimal, stringified
   soilCapabilityClass: string | null;
   soilHydricPct: number | null;
+  // Crop cover (null if no PropertyCropCover row exists for this property yet)
+  cropCoverYear: number | null;
+  cropCoverCropCode: number | null;
+  cropCoverDescription: string | null;
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -186,6 +190,17 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
     } satisfies PropertySoilSummary;
   } else {
     result.soilData = null;
+  }
+
+  // Crop cover (null if no PropertyCropCover row exists for this property yet)
+  if (row.cropCoverYear !== null) {
+    result.cropCover = {
+      year: row.cropCoverYear,
+      cropCode: row.cropCoverCropCode!,
+      cropDescription: row.cropCoverDescription!,
+    } satisfies PropertyCropCoverSummary;
+  } else {
+    result.cropCover = null;
   }
 
   return result;

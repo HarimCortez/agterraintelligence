@@ -46,6 +46,9 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     soilSlopePercent: null,
     soilCapabilityClass: null,
     soilHydricPct: null,
+    cropCoverYear: null,
+    cropCoverCropCode: null,
+    cropCoverDescription: null,
     ...overrides,
   };
 }

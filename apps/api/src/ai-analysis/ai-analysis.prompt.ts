@@ -92,6 +92,7 @@ export function buildUserPrompt(property: PropertyDetailDto, question: string | 
     valuation: property.valuation,
     riskFlags: property.riskFlags,
     soilData: property.soilData,
+    cropCover: property.cropCover,
   };
 
   const effectiveQuestion = question && question.trim().length > 0 ? question.trim() : DEFAULT_QUESTION;
@@ -142,6 +143,7 @@ export function buildTieredReportUserPrompt(property: PropertyDetailDto, tier: R
     valuation: property.valuation,
     riskFlags: property.riskFlags,
     soilData: property.soilData,
+    cropCover: property.cropCover,
   };
 
   const instruction = TIER_INSTRUCTIONS[tier];

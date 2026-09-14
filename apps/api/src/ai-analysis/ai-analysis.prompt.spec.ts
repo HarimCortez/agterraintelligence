@@ -21,6 +21,7 @@ function makeProperty(overrides: Partial<PropertyDetailDto> = {}): PropertyDetai
     { id: "r1", riskType: "wetlands", severity: RiskSeverity.medium, description: "Partial wetlands overlap", createdAt: "2026-01-01T00:00:00.000Z" },
   ];
   dto.soilData = null;
+  dto.cropCover = null;
   return Object.assign(dto, overrides);
 }
 
