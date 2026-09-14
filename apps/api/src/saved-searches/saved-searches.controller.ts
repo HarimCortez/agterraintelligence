@@ -12,7 +12,9 @@ import {
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../identity-access/investor/jwt-auth.guard";
 import { CurrentAccountContext } from "../common/account-context/current-account-context.decorator";
+import { CurrentUser } from "../identity-access/investor/current-user.decorator";
 import { AccountContext } from "../common/account-context/account-context";
+import { AuthenticatedInvestorUser } from "../identity-access/investor/investor.types";
 import { SavedSearchesService } from "./saved-searches.service";
 import {
   GetSavedSearchesResponseDto,
@@ -53,9 +55,10 @@ export class SavedSearchesController {
   @Post()
   async createSavedSearch(
     @CurrentAccountContext() ctx: AccountContext,
+    @CurrentUser() user: AuthenticatedInvestorUser,
     @Body() input: CreateSavedSearchDto,
   ): Promise<SavedSearchDto> {
-    return this.savedSearchesService.createForAccount(ctx, input);
+    return this.savedSearchesService.createForAccount(ctx, input, user.externalRole);
   }
 
   /**

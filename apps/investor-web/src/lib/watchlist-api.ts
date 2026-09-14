@@ -20,7 +20,7 @@
 "use client";
 
 import { authFetch } from "./auth-fetch";
-import { UnauthorizedError } from "./api-errors";
+import { ForbiddenError, UnauthorizedError } from "./api-errors";
 import type { PropertyDetail, PropertyResult } from "./properties-api";
 
 export interface WatchlistItem {
@@ -49,7 +49,19 @@ export async function fetchWatchlist(): Promise<WatchlistResponse> {
 export async function addToWatchlist(propertyId: string): Promise<void> {
   const res = await authFetch(`${BASE_URL}/${encodeURIComponent(propertyId)}`, { method: "POST" });
   if (res.status === 401) throw new UnauthorizedError();
+  if (res.status === 403) throw new ForbiddenError(await readErrorMessage(res));
   if (!res.ok) throw new Error(`Failed to add property to watchlist (HTTP ${res.status})`);
+}
+
+/** Reads Nest's default `{ statusCode, message, error }` error body, falling back to a generic message if the body isn't JSON or has no `message`. */
+async function readErrorMessage(res: Response): Promise<string | undefined> {
+  try {
+    const data = (await res.json()) as { message?: string | string[] };
+    if (Array.isArray(data.message)) return data.message.join(" ");
+    return data.message ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function removeFromWatchlist(propertyId: string): Promise<void> {

@@ -15,6 +15,7 @@ import {
 } from "@/lib/properties-api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useHandleUnauthorized } from "@/lib/use-handle-unauthorized";
+import { ForbiddenError } from "@/lib/api-errors";
 import { createSavedSearch } from "@/lib/saved-searches-api";
 
 interface FilterPanelProps {
@@ -334,6 +335,11 @@ export function FilterPanel({ value, onApply }: FilterPanelProps) {
               value={savedSearchName}
               onChange={(e) => setSavedSearchName(e.target.value)}
             />
+            {saveSearchMutation.isError && saveSearchMutation.error instanceof ForbiddenError && (
+              <p role="alert" className="text-xs text-text-secondary">
+                {saveSearchMutation.error.message}
+              </p>
+            )}
             <div className="flex gap-sm">
               <button
                 type="submit"

@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { StarFilledIcon } from "@agterra/ui";
 import { useAuthStore } from "@/lib/auth-store";
 import { useHandleUnauthorized } from "@/lib/use-handle-unauthorized";
+import { ForbiddenError } from "@/lib/api-errors";
 import { addToWatchlist, removeFromWatchlist, fetchWatchlist, watchlistQueryKey } from "@/lib/watchlist-api";
 
 interface WatchToggleProps {
@@ -30,12 +32,25 @@ interface WatchToggleProps {
  * `useHandleUnauthorized` catches the mutation's real `401` and redirects
  * the same way, via `logout()` + `/login`, consistent with the "no silent
  * refresh, expiry just means log in again" decision.
+ *
+ * Plan limit reached (`403 ForbiddenError` — the tier's watchlist cap,
+ * see `WATCHLIST_LIMITS` on the API): shown as a small auto-dismissing
+ * tooltip bubble rather than inline text, since this button is reused
+ * across many cards at once (a whole Discover grid) and inline text would
+ * reflow every card's layout.
  */
 export function WatchToggle({ propertyId, className = "" }: WatchToggleProps) {
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const queryClient = useQueryClient();
   const handleUnauthorized = useHandleUnauthorized();
+  const [limitMessage, setLimitMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!limitMessage) return;
+    const timer = setTimeout(() => setLimitMessage(null), 5000);
+    return () => clearTimeout(timer);
+  }, [limitMessage]);
 
   // Shared cache entry with `WatchlistWorkspace` (same query key) — only
   // one real network request fires even if many `WatchToggle`s are mounted
@@ -55,7 +70,10 @@ export function WatchToggle({ propertyId, className = "" }: WatchToggleProps) {
   const addMutation = useMutation({
     mutationFn: () => addToWatchlist(propertyId),
     onSuccess: invalidate,
-    onError: (error) => handleUnauthorized(error),
+    onError: (error) => {
+      if (handleUnauthorized(error)) return;
+      if (error instanceof ForbiddenError) setLimitMessage(error.message);
+    },
   });
 
   const removeMutation = useMutation({
@@ -79,21 +97,31 @@ export function WatchToggle({ propertyId, className = "" }: WatchToggleProps) {
   };
 
   return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        handleClick();
-      }}
-      disabled={pending}
-      aria-pressed={isWatched}
-      title={user ? undefined : "Log in to watch properties"}
-      className={`inline-flex items-center gap-xs text-sm font-semibold transition-colors ${
-        isWatched ? "text-gold-accent" : "text-text-secondary hover:text-gold-accent"
-      } disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
-    >
-      <StarFilledIcon className={isWatched ? "opacity-100" : "opacity-30"} />
-      <span>{isWatched ? "Watching" : "Watch"}</span>
-    </button>
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleClick();
+        }}
+        disabled={pending}
+        aria-pressed={isWatched}
+        title={user ? undefined : "Log in to watch properties"}
+        className={`inline-flex items-center gap-xs text-sm font-semibold transition-colors ${
+          isWatched ? "text-gold-accent" : "text-text-secondary hover:text-gold-accent"
+        } disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      >
+        <StarFilledIcon className={isWatched ? "opacity-100" : "opacity-30"} />
+        <span>{isWatched ? "Watching" : "Watch"}</span>
+      </button>
+      {limitMessage && (
+        <span
+          role="alert"
+          className="absolute bottom-full left-1/2 z-10 mb-xs w-max max-w-[220px] -translate-x-1/2 rounded border border-border-subtle bg-surface px-sm py-xs text-xs text-text-primary shadow-md"
+        >
+          {limitMessage}
+        </span>
+      )}
+    </span>
   );
 }

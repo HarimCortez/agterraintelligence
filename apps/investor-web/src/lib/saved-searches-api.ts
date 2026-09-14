@@ -20,7 +20,7 @@
 "use client";
 
 import { authFetch } from "./auth-fetch";
-import { UnauthorizedError } from "./api-errors";
+import { ForbiddenError, UnauthorizedError } from "./api-errors";
 import type { PropertyFilters } from "./properties-api";
 
 export interface SavedSearch {
@@ -65,6 +65,7 @@ export async function createSavedSearch(name: string, criteria: PropertyFilters)
     body: JSON.stringify({ name, criteria }),
   });
   if (res.status === 401) throw new UnauthorizedError();
+  if (res.status === 403) throw new ForbiddenError(await parseErrorMessage(res, "Your plan doesn't allow more saved searches."));
   if (!res.ok) throw new Error(await parseErrorMessage(res, "Couldn't save this search. Please try again."));
   return (await res.json()) as SavedSearch;
 }

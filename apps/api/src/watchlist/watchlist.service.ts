@@ -1,8 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ExternalRole } from "@agterra/db";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { PropertiesService } from "../properties/properties.service";
 import { toPropertyDetail } from "../properties/properties.serializers";
 import { AccountContext } from "../common/account-context/account-context";
+import { WATCHLIST_LIMITS } from "../common/entitlements/tier-limits";
 import { WatchlistItemDto, GetWatchlistResponseDto } from "./dto/watchlist.dto";
 
 /**
@@ -55,10 +57,33 @@ export class WatchlistService {
    * Add a property to the current user's watchlist.
    * Idempotent: if already watched, return success (200) rather than 409.
    * Throws NotFoundException if property doesn't exist.
+   *
+   * Enforces the caller's tier watchlist cap (`WATCHLIST_LIMITS`) — but
+   * only when actually creating a new item. Re-adding an already-watched
+   * property never counts against the limit (it's a no-op update, not a
+   * new row), which also means this can never make an account that's
+   * already over its limit (e.g. after a downgrade) permanently stuck —
+   * un-watching still works regardless of the cap.
    */
-  async addToWatchlist(ctx: AccountContext, propertyId: string): Promise<WatchlistItemDto> {
+  async addToWatchlist(ctx: AccountContext, propertyId: string, externalRole: ExternalRole): Promise<WatchlistItemDto> {
     // Verify property exists
     await this.propertiesService.getPropertyById(propertyId);
+
+    const existing = await this.prisma.watchlistItem.findUnique({
+      where: { userId_propertyId: { userId: ctx.scopeId, propertyId } },
+    });
+
+    if (!existing) {
+      const limit = WATCHLIST_LIMITS[externalRole];
+      if (limit !== null) {
+        const count = await this.prisma.watchlistItem.count({ where: { userId: ctx.scopeId } });
+        if (count >= limit) {
+          throw new ForbiddenException(
+            `Your plan's watchlist limit (${limit} ${limit === 1 ? "property" : "properties"}) has been reached. Upgrade your plan to watch more properties.`,
+          );
+        }
+      }
+    }
 
     // Upsert watchlist item (create if not exists, update createdAt if does exist)
     // Since we have a unique constraint on (userId, propertyId), we can use upsert

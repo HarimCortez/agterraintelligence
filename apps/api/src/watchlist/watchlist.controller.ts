@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Delete, Param, ParseUUIDPipe, HttpCode, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../identity-access/investor/jwt-auth.guard";
 import { CurrentAccountContext } from "../common/account-context/current-account-context.decorator";
+import { CurrentUser } from "../identity-access/investor/current-user.decorator";
 import { AccountContext } from "../common/account-context/account-context";
+import { AuthenticatedInvestorUser } from "../identity-access/investor/investor.types";
 import { WatchlistService } from "./watchlist.service";
 import { GetWatchlistResponseDto, WatchlistItemDto } from "./dto/watchlist.dto";
 
@@ -34,9 +36,10 @@ export class WatchlistController {
   @Post(":propertyId")
   async addToWatchlist(
     @CurrentAccountContext() ctx: AccountContext,
+    @CurrentUser() user: AuthenticatedInvestorUser,
     @Param("propertyId", new ParseUUIDPipe()) propertyId: string,
   ): Promise<WatchlistItemDto> {
-    return this.watchlistService.addToWatchlist(ctx, propertyId);
+    return this.watchlistService.addToWatchlist(ctx, propertyId, user.externalRole);
   }
 
   /**

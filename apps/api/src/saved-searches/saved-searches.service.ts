@@ -1,7 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@agterra/db";
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ExternalRole, Prisma } from "@agterra/db";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { AccountContext } from "../common/account-context/account-context";
+import { SAVED_SEARCH_LIMITS } from "../common/entitlements/tier-limits";
 import {
   SavedSearchDto,
   GetSavedSearchesResponseDto,
@@ -35,10 +36,15 @@ export class SavedSearchesService {
   /**
    * Create a new saved search for the current user.
    * Validates name (non-empty, max 100 chars) and criteria (must be an object).
+   * Enforces the caller's tier saved-search cap (`SAVED_SEARCH_LIMITS`) —
+   * unlike watchlist's upsert, every call here creates a genuinely new
+   * row, so the count check applies unconditionally (no "already exists"
+   * exemption needed).
    */
   async createForAccount(
     ctx: AccountContext,
     input: CreateSavedSearchDto,
+    externalRole: ExternalRole,
   ): Promise<SavedSearchDto> {
     // Validate name
     if (!input.name || typeof input.name !== "string" || input.name.trim().length === 0) {
@@ -51,6 +57,16 @@ export class SavedSearchesService {
     // Validate criteria (must be an object)
     if (!input.criteria || typeof input.criteria !== "object" || Array.isArray(input.criteria)) {
       throw new BadRequestException("criteria must be a non-empty object");
+    }
+
+    const limit = SAVED_SEARCH_LIMITS[externalRole];
+    if (limit !== null) {
+      const count = await this.prisma.savedSearch.count({ where: { userId: ctx.scopeId } });
+      if (count >= limit) {
+        throw new ForbiddenException(
+          `Your plan's saved search limit (${limit}) has been reached. Upgrade your plan to save more searches.`,
+        );
+      }
     }
 
     const search = await this.prisma.savedSearch.create({
