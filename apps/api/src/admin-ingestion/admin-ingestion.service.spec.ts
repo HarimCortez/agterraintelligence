@@ -18,6 +18,7 @@ import { FlParcelCadastralIngestionService } from "../ingestion/fl-parcel-cadast
 import { UsdaSoilIngestionService } from "../ingestion/usda-soil-ingestion.service";
 import { WetlandsIngestionService } from "../ingestion/wetlands-ingestion.service";
 import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine-ingestion.service";
+import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-ingestion.service";
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
@@ -41,6 +42,7 @@ describe("AdminIngestionService", () => {
   const usdaSoilIngestionMock = { trigger: jest.fn() };
   const wetlandsIngestionMock = { trigger: jest.fn() };
   const citrusQuarantineIngestionMock = { trigger: jest.fn() };
+  const citrusBlackSpotIngestionMock = { trigger: jest.fn() };
   const croplandCoverIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
@@ -55,6 +57,7 @@ describe("AdminIngestionService", () => {
         { provide: UsdaSoilIngestionService, useValue: usdaSoilIngestionMock },
         { provide: WetlandsIngestionService, useValue: wetlandsIngestionMock },
         { provide: CitrusQuarantineIngestionService, useValue: citrusQuarantineIngestionMock },
+        { provide: CitrusBlackSpotIngestionService, useValue: citrusBlackSpotIngestionMock },
         { provide: CroplandCoverIngestionService, useValue: croplandCoverIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
@@ -241,6 +244,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-5",
           metadata: { source: "usda_aphis_citrus_quarantine" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerCitrusBlackSpotRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      citrusBlackSpotIngestionMock.trigger.mockResolvedValue({ id: "run-7" });
+
+      const result = await service.triggerCitrusBlackSpotRun(ADMIN);
+
+      expect(citrusBlackSpotIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-7",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_aphis_citrus_black_spot source", async () => {
+      citrusBlackSpotIngestionMock.trigger.mockResolvedValue({ id: "run-7" });
+
+      await service.triggerCitrusBlackSpotRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-7",
+          metadata: { source: "usda_aphis_citrus_black_spot" },
         }),
       );
     });

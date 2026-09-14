@@ -7,6 +7,7 @@ import { FlParcelCadastralIngestionService } from "../ingestion/fl-parcel-cadast
 import { UsdaSoilIngestionService } from "../ingestion/usda-soil-ingestion.service";
 import { WetlandsIngestionService } from "../ingestion/wetlands-ingestion.service";
 import { CitrusQuarantineIngestionService } from "../ingestion/citrus-quarantine-ingestion.service";
+import { CitrusBlackSpotIngestionService } from "../ingestion/citrus-black-spot-ingestion.service";
 import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
@@ -25,6 +26,7 @@ export class AdminIngestionService {
     private readonly usdaSoilIngestion: UsdaSoilIngestionService,
     private readonly wetlandsIngestion: WetlandsIngestionService,
     private readonly citrusQuarantineIngestion: CitrusQuarantineIngestionService,
+    private readonly citrusBlackSpotIngestion: CitrusBlackSpotIngestionService,
     private readonly croplandCoverIngestion: CroplandCoverIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
@@ -115,6 +117,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_citrus_quarantine" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerCitrusBlackSpotRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.citrusBlackSpotIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_citrus_black_spot" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

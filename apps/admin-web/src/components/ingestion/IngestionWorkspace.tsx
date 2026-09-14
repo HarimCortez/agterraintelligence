@@ -12,6 +12,7 @@ import {
   triggerUsdaSoilRun,
   triggerWetlandsRun,
   triggerCitrusQuarantineRun,
+  triggerCitrusBlackSpotRun,
   triggerCroplandCoverRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
@@ -24,14 +25,16 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the six real ingestion jobs that exist: FEMA
+ * admin manually trigger, the seven real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
- * USFWS wetlands data, USDA APHIS citrus greening quarantine data, and the
- * USDA NASS Cropland Data Layer. See
+ * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
+ * USDA APHIS Citrus Black Spot quarantine data, and the USDA NASS Cropland
+ * Data Layer. See
  * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
- * and `cropland-cover-ingestion.service.ts`'s doc comments for why all six
+ * `citrus-black-spot-ingestion.service.ts`, and
+ * `cropland-cover-ingestion.service.ts`'s doc comments for why all seven
  * are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
@@ -114,6 +117,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerBlackSpotMutation = useMutation({
+    mutationFn: () => triggerCitrusBlackSpotRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const triggerCropCoverMutation = useMutation({
     mutationFn: () => triggerCroplandCoverRun(),
     onSuccess: () => {
@@ -189,6 +201,14 @@ export function IngestionWorkspace() {
           </button>
           <button
             type="button"
+            disabled={triggerBlackSpotMutation.isPending || runInProgress}
+            onClick={() => triggerBlackSpotMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerBlackSpotMutation.isPending || runInProgress ? "Running…" : "Run Citrus Black Spot Sync"}
+          </button>
+          <button
+            type="button"
             disabled={triggerCropCoverMutation.isPending || runInProgress}
             onClick={() => triggerCropCoverMutation.mutate()}
             className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
@@ -204,6 +224,7 @@ export function IngestionWorkspace() {
         triggerSoilMutation,
         triggerWetlandsMutation,
         triggerCitrusMutation,
+        triggerBlackSpotMutation,
         triggerCropCoverMutation,
       ].map(
         (mutation, i) =>
@@ -219,6 +240,7 @@ export function IngestionWorkspace() {
         triggerSoilMutation.isSuccess ||
         triggerWetlandsMutation.isSuccess ||
         triggerCitrusMutation.isSuccess ||
+        triggerBlackSpotMutation.isSuccess ||
         triggerCropCoverMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.

@@ -61,6 +61,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerCitrusQuarantineRun(admin);
   }
 
+  @Post("citrus-black-spot/run")
+  @RequirePermission("ingestion.run")
+  triggerCitrusBlackSpotRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerCitrusBlackSpotRun(admin);
+  }
+
   @Post("cropland-cover/run")
   @RequirePermission("ingestion.run")
   triggerCroplandCoverRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
