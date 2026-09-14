@@ -77,6 +77,12 @@ export async function triggerWetlandsRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerCitrusQuarantineRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/citrus-quarantine/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the citrus quarantine sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;
