@@ -60,6 +60,13 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     cropLossCountyTopCauseOfLoss: null,
     cropLossCountyTopCauseOfLossIndemnityCents: null,
     cropLossCountyTotalIndemnityCents: null,
+    economicPopulationYear: null,
+    economicCountyPopulation: null,
+    economicCountyNetMigration: null,
+    economicUnemploymentYear: null,
+    economicCountyUnemploymentRatePct: null,
+    economicIncomeYear: null,
+    economicCountyMedianHouseholdIncomeCents: null,
     ...overrides,
   };
 }

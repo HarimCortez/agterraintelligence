@@ -60,6 +60,17 @@ export interface PropertyCropLossSummaryDto {
   countyTotalIndemnityCents: number | null;
 }
 
+/** Real USDA ERS population growth and local economic figures for the property's own COUNTY (not parcel-specific) — see `PropertyCountyEconomicSummary` in schema.prisma. */
+export interface PropertyCountyEconomicSummaryDto {
+  populationYear: number;
+  countyPopulation: number | null;
+  countyNetMigration: number | null;
+  unemploymentYear: number;
+  countyUnemploymentRatePct: number | null;
+  incomeYear: number;
+  countyMedianHouseholdIncomeCents: number | null;
+}
+
 export class PropertyResultDto {
   id!: string;
   address!: string;
@@ -96,6 +107,7 @@ export class PropertyDetailDto {
   agCensusSummary!: PropertyAgCensusSummaryDto | null;
   timberSummary!: PropertyTimberSummaryDto | null;
   cropLossSummary!: PropertyCropLossSummaryDto | null;
+  countyEconomicSummary!: PropertyCountyEconomicSummaryDto | null;
 }
 
 export class ListPropertiesResponseDto {

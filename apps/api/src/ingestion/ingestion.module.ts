@@ -5,6 +5,8 @@ import { CitrusQuarantineClient } from "./citrus-quarantine-client";
 import { CitrusQuarantineIngestionService } from "./citrus-quarantine-ingestion.service";
 import { CroplandCoverIngestionService } from "./cropland-cover-ingestion.service";
 import { CroplandDataClient } from "./cropland-data-client";
+import { ErsCountyEconomicClient } from "./ers-county-economic-client";
+import { ErsCountyEconomicIngestionService } from "./ers-county-economic-ingestion.service";
 import { FemaFloodZoneClient } from "./fema-flood-zone-client";
 import { FemaFloodZoneIngestionService } from "./fema-flood-zone-ingestion.service";
 import { FiaTimberClient } from "./fia-timber-client";
@@ -21,7 +23,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Ten sources: FEMA flood zones
+ * Real external-data ingestion module. Eleven sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -39,10 +41,14 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * Forest Inventory and Analysis program (see
  * `FiaTimberIngestionService`'s doc comment — a real, live, keyless JSON
  * API, unlike the NASS Census of Agriculture job it otherwise resembles),
- * and the USDA Risk Management Agency's federal crop insurance Cause of
+ * the USDA Risk Management Agency's federal crop insurance Cause of
  * Loss data (see `RmaCauseOfLossIngestionService`'s doc comment — like
- * the FIA job, a real keyless bulk file with no gated API alternative).
- * Exports all ten ingestion services so `AdminIngestionModule` can
+ * the FIA job, a real keyless bulk file with no gated API alternative),
+ * and the USDA ERS (Economic Research Service) County-level Data Sets
+ * (see `ErsCountyEconomicIngestionService`'s doc comment — the first
+ * source that isn't physical/agricultural: county population growth and
+ * local economic conditions as direct land-investment context).
+ * Exports all eleven ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -70,6 +76,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     FiaTimberIngestionService,
     RmaCauseOfLossClient,
     RmaCauseOfLossIngestionService,
+    ErsCountyEconomicClient,
+    ErsCountyEconomicIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -82,6 +90,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     NassAgCensusIngestionService,
     FiaTimberIngestionService,
     RmaCauseOfLossIngestionService,
+    ErsCountyEconomicIngestionService,
   ],
 })
 export class IngestionModule {}

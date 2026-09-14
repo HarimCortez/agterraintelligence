@@ -329,6 +329,73 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
         )}
       </section>
 
+      <section aria-label="County economic context" className="rounded border border-border-subtle bg-surface p-lg">
+        <h2 className="mb-sm text-lg font-semibold text-text-primary">County Economic Context</h2>
+        {property.countyEconomicSummary === null ? (
+          <p className="text-sm text-text-secondary">Not yet available.</p>
+        ) : (
+          <div className="flex flex-col gap-sm">
+            <p className="text-xs text-text-secondary">
+              {property.county} County-wide figures, not specific to this parcel — population and local economic
+              conditions, relevant background for a land investment thesis.
+            </p>
+            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Population
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.countyEconomicSummary.countyPopulation !== null
+                    ? property.countyEconomicSummary.countyPopulation.toLocaleString("en-US")
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Net migration
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.countyEconomicSummary.countyNetMigration !== null
+                    ? property.countyEconomicSummary.countyNetMigration.toLocaleString("en-US", { signDisplay: "exceptZero" })
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Unemployment rate
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.countyEconomicSummary.countyUnemploymentRatePct !== null
+                    ? `${property.countyEconomicSummary.countyUnemploymentRatePct}%`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Median household income
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.countyEconomicSummary.countyMedianHouseholdIncomeCents !== null
+                    ? (property.countyEconomicSummary.countyMedianHouseholdIncomeCents / 100).toLocaleString("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      })
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+            <p className="text-xs text-text-secondary">
+              Source: USDA ERS (Economic Research Service). Population and net migration are{" "}
+              {property.countyEconomicSummary.populationYear}; unemployment rate is{" "}
+              {property.countyEconomicSummary.unemploymentYear}; median household income is{" "}
+              {property.countyEconomicSummary.incomeYear} (ERS&apos;s own source data publishes income figures a
+              year behind unemployment).
+            </p>
+          </div>
+        )}
+      </section>
+
       {property.landUseType === "timber" && (
         <section aria-label="County timber context" className="rounded border border-border-subtle bg-surface p-lg">
           <h2 className="mb-sm text-lg font-semibold text-text-primary">County Timber Context</h2>

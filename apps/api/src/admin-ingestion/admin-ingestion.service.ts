@@ -12,6 +12,7 @@ import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-inges
 import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
 import { FiaTimberIngestionService } from "../ingestion/fia-timber-ingestion.service";
 import { RmaCauseOfLossIngestionService } from "../ingestion/rma-cause-of-loss-ingestion.service";
+import { ErsCountyEconomicIngestionService } from "../ingestion/ers-county-economic-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -34,6 +35,7 @@ export class AdminIngestionService {
     private readonly nassAgCensusIngestion: NassAgCensusIngestionService,
     private readonly fiaTimberIngestion: FiaTimberIngestionService,
     private readonly rmaCauseOfLossIngestion: RmaCauseOfLossIngestionService,
+    private readonly ersCountyEconomicIngestion: ErsCountyEconomicIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -198,6 +200,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_rma_cause_of_loss" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerErsCountyEconomicRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.ersCountyEconomicIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_ers_county_economic" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

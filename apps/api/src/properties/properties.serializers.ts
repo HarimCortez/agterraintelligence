@@ -1,5 +1,5 @@
 import { LandUseType, ListingStatus, OpportunityBand, ValuationConfidence } from "@agterra/db";
-import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary, PropertyAgCensusSummaryDto, PropertyTimberSummaryDto, PropertyCropLossSummaryDto } from "./dto/property-result.dto";
+import { PropertyResultDto, ListPropertiesResponseDto, PropertyDetailDto, PropertyRiskFlag, PropertySoilSummary, PropertyCropCoverSummary, PropertyAgCensusSummaryDto, PropertyTimberSummaryDto, PropertyCropLossSummaryDto, PropertyCountyEconomicSummaryDto } from "./dto/property-result.dto";
 
 /**
  * Raw result row from the combined query. The query includes:
@@ -93,6 +93,17 @@ export interface RawPropertyDetailRow {
   // BIGINT columns — Prisma's raw queries return these as native JS `bigint`, not `number` (confirmed necessary live: a real county-year indemnity total in cents can exceed Postgres INT4's ~2.1 billion range, e.g. DeSoto's real 2024 total was 2,433,085,900 cents).
   cropLossCountyTopCauseOfLossIndemnityCents: bigint | null;
   cropLossCountyTotalIndemnityCents: bigint | null;
+  // County economic summary (null if no PropertyCountyEconomicSummary row exists for this property yet).
+  // `economicPopulationYear` is the presence signal (always set when the row exists) — `unemploymentYear`/
+  // `incomeYear` are separate fields (not derived from the population year) because ERS's own source file
+  // publishes unemployment and income figures a year apart from each other.
+  economicPopulationYear: number | null;
+  economicCountyPopulation: number | null;
+  economicCountyNetMigration: number | null;
+  economicUnemploymentYear: number | null;
+  economicCountyUnemploymentRatePct: string | null; // Decimal, stringified
+  economicIncomeYear: number | null;
+  economicCountyMedianHouseholdIncomeCents: number | null;
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -260,6 +271,22 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
     } satisfies PropertyCropLossSummaryDto;
   } else {
     result.cropLossSummary = null;
+  }
+
+  // County economic summary (null if no PropertyCountyEconomicSummary row exists for this property yet)
+  if (row.economicPopulationYear !== null) {
+    result.countyEconomicSummary = {
+      populationYear: row.economicPopulationYear,
+      countyPopulation: row.economicCountyPopulation,
+      countyNetMigration: row.economicCountyNetMigration,
+      unemploymentYear: row.economicUnemploymentYear!,
+      countyUnemploymentRatePct:
+        row.economicCountyUnemploymentRatePct !== null ? parseFloat(row.economicCountyUnemploymentRatePct) : null,
+      incomeYear: row.economicIncomeYear!,
+      countyMedianHouseholdIncomeCents: row.economicCountyMedianHouseholdIncomeCents,
+    } satisfies PropertyCountyEconomicSummaryDto;
+  } else {
+    result.countyEconomicSummary = null;
   }
 
   return result;

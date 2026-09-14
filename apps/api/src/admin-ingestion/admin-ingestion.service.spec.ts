@@ -23,6 +23,7 @@ import { CroplandCoverIngestionService } from "../ingestion/cropland-cover-inges
 import { NassAgCensusIngestionService } from "../ingestion/nass-ag-census-ingestion.service";
 import { FiaTimberIngestionService } from "../ingestion/fia-timber-ingestion.service";
 import { RmaCauseOfLossIngestionService } from "../ingestion/rma-cause-of-loss-ingestion.service";
+import { ErsCountyEconomicIngestionService } from "../ingestion/ers-county-economic-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -50,6 +51,7 @@ describe("AdminIngestionService", () => {
   const nassAgCensusIngestionMock = { trigger: jest.fn() };
   const fiaTimberIngestionMock = { trigger: jest.fn() };
   const rmaCauseOfLossIngestionMock = { trigger: jest.fn() };
+  const ersCountyEconomicIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -68,6 +70,7 @@ describe("AdminIngestionService", () => {
         { provide: NassAgCensusIngestionService, useValue: nassAgCensusIngestionMock },
         { provide: FiaTimberIngestionService, useValue: fiaTimberIngestionMock },
         { provide: RmaCauseOfLossIngestionService, useValue: rmaCauseOfLossIngestionMock },
+        { provide: ErsCountyEconomicIngestionService, useValue: ersCountyEconomicIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -423,6 +426,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-10",
           metadata: { source: "usda_rma_cause_of_loss" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerErsCountyEconomicRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      ersCountyEconomicIngestionMock.trigger.mockResolvedValue({ id: "run-11" });
+
+      const result = await service.triggerErsCountyEconomicRun(ADMIN);
+
+      expect(ersCountyEconomicIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-11",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_ers_county_economic source", async () => {
+      ersCountyEconomicIngestionMock.trigger.mockResolvedValue({ id: "run-11" });
+
+      await service.triggerErsCountyEconomicRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-11",
+          metadata: { source: "usda_ers_county_economic" },
         }),
       );
     });

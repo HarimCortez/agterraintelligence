@@ -482,6 +482,7 @@ model Property {
   agCensusSummary  PropertyAgCensusSummary?
   timberSummary    PropertyTimberSummary?
   cropLossSummary  PropertyCropLossSummary?
+  countyEconomicSummary PropertyCountyEconomicSummary?
   aiInteractions   AiInteraction[]
   watchlistItems   WatchlistItem[]
   reportOrders     ReportOrder[]
@@ -768,6 +769,58 @@ model PropertyCropLossSummary {
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_crop_loss_summary")
+}
+
+// One-to-one with `properties`. Real, county-level USDA ERS (Economic
+// Research Service) County-level Data Sets for the property's own county —
+// see `apps/api/src/ingestion/ers-county-economic-client.ts`'s doc comment
+// for how this was sourced. The eleventh ingestion source and the first
+// that isn't a physical/agricultural dataset — population growth and local
+// economic conditions are real context for a land *investment* thesis
+// (development/appreciation pressure, buyer demand), not something the
+// other ten sources touch.
+//
+// Two real, keyless, no-registration CSV files, updated annually (fresher
+// than the 5-year Census of Agriculture `PropertyAgCensusSummary` relies
+// on): ERS's Population Estimates file and its Unemployment & Median
+// Household Income file. A real data quirk found while verifying both
+// live: the two figures in the *same* income/unemployment file have
+// different vintages — `Unemployment_rate_2023` sits next to
+// `Median_Household_Income_2022` in the same row, because BLS's
+// unemployment estimates (LAUS) publish faster than the Census Bureau's
+// household income estimates (ACS 1-year). Modeled with separate
+// `unemploymentYear`/`incomeYear` fields rather than one shared `year`, so
+// that one-year lag is explicit instead of silently wrong.
+//
+// Swept across every property, same as `PropertyAgCensusSummary` and
+// `PropertyCropLossSummary` — county economic context is relevant
+// background regardless of the property's `landUseType`.
+model PropertyCountyEconomicSummary {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @unique @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /** The vintage year of `countyPopulation`/`countyNetMigration`, e.g. 2023. */
+  populationYear Int @map("population_year")
+  /** County population estimate for `populationYear`. */
+  countyPopulation Int? @map("county_population")
+  /** Net migration (domestic + international, minus residual) for `populationYear` — can be negative (population decline). A real signal of growth/decline pressure, not derived from the population figure above. */
+  countyNetMigration Int? @map("county_net_migration")
+
+  /** The vintage year of `countyUnemploymentRatePct`, e.g. 2023. */
+  unemploymentYear Int @map("unemployment_year")
+  /** County unemployment rate, as a percent (e.g. 3.7), for `unemploymentYear`. */
+  countyUnemploymentRatePct Decimal? @db.Decimal(5, 2) @map("county_unemployment_rate_pct")
+
+  /** The vintage year of `countyMedianHouseholdIncomeCents` — one year behind `unemploymentYear` in ERS's own source file (see model doc comment). */
+  incomeYear Int @map("income_year")
+  /** County median household income, in cents. Confirmed to safely fit `Int` (unlike `PropertyCropLossSummary`'s cents totals) — a household income figure is orders of magnitude smaller than a county-year insurance indemnity total. */
+  countyMedianHouseholdIncomeCents Int? @map("county_median_household_income_cents")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@map("property_county_economic_summary")
 }
 
 // ---------------------------------------------------------------------------

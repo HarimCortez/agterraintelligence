@@ -96,6 +96,7 @@ export function buildUserPrompt(property: PropertyDetailDto, question: string | 
     agCensusSummary: property.agCensusSummary,
     timberSummary: property.timberSummary,
     cropLossSummary: property.cropLossSummary,
+    countyEconomicSummary: property.countyEconomicSummary,
   };
 
   const effectiveQuestion = question && question.trim().length > 0 ? question.trim() : DEFAULT_QUESTION;
@@ -150,6 +151,7 @@ export function buildTieredReportUserPrompt(property: PropertyDetailDto, tier: R
     agCensusSummary: property.agCensusSummary,
     timberSummary: property.timberSummary,
     cropLossSummary: property.cropLossSummary,
+    countyEconomicSummary: property.countyEconomicSummary,
   };
 
   const instruction = TIER_INSTRUCTIONS[tier];

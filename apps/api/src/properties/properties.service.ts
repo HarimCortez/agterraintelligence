@@ -252,7 +252,14 @@ export class PropertiesService {
         pcls.year AS "cropLossYear",
         pcls.county_top_cause_of_loss AS "cropLossCountyTopCauseOfLoss",
         pcls.county_top_cause_of_loss_indemnity_cents AS "cropLossCountyTopCauseOfLossIndemnityCents",
-        pcls.county_total_indemnity_cents AS "cropLossCountyTotalIndemnityCents"
+        pcls.county_total_indemnity_cents AS "cropLossCountyTotalIndemnityCents",
+        pces.population_year AS "economicPopulationYear",
+        pces.county_population AS "economicCountyPopulation",
+        pces.county_net_migration AS "economicCountyNetMigration",
+        pces.unemployment_year AS "economicUnemploymentYear",
+        pces.county_unemployment_rate_pct AS "economicCountyUnemploymentRatePct",
+        pces.income_year AS "economicIncomeYear",
+        pces.county_median_household_income_cents AS "economicCountyMedianHouseholdIncomeCents"
       FROM properties p
       LEFT JOIN opportunity_scores os ON p.id = os.property_id
       LEFT JOIN property_valuations pv ON p.id = pv.property_id
@@ -262,6 +269,7 @@ export class PropertiesService {
       LEFT JOIN property_ag_census_summary pacs ON p.id = pacs.property_id
       LEFT JOIN property_timber_summary pts ON p.id = pts.property_id
       LEFT JOIN property_crop_loss_summary pcls ON p.id = pcls.property_id
+      LEFT JOIN property_county_economic_summary pces ON p.id = pces.property_id
       WHERE p.id = $1::uuid
       GROUP BY p.id, p.address, p.county, p.state, p.acreage, p.asking_price_cents,
                p.land_use_type, p.listing_status, p.location,
@@ -274,7 +282,10 @@ export class PropertiesService {
                pts.year, pts.county_timberland_acres, pts.county_timber_volume_cu_ft_per_acre,
                pts.county_timber_volume_sampling_error_pct,
                pcls.year, pcls.county_top_cause_of_loss, pcls.county_top_cause_of_loss_indemnity_cents,
-               pcls.county_total_indemnity_cents
+               pcls.county_total_indemnity_cents,
+               pces.population_year, pces.county_population, pces.county_net_migration,
+               pces.unemployment_year, pces.county_unemployment_rate_pct,
+               pces.income_year, pces.county_median_household_income_cents
     `;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

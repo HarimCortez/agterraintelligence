@@ -129,6 +129,17 @@ export interface PropertyCropLossSummary {
   countyTotalIndemnityCents: number | null;
 }
 
+/** Real USDA ERS population growth and local economic figures for the property's own COUNTY (not parcel-specific). */
+export interface PropertyCountyEconomicSummary {
+  populationYear: number;
+  countyPopulation: number | null;
+  countyNetMigration: number | null;
+  unemploymentYear: number;
+  countyUnemploymentRatePct: number | null;
+  incomeYear: number;
+  countyMedianHouseholdIncomeCents: number | null;
+}
+
 export interface PropertyDetail {
   id: string;
   address: string;
@@ -153,6 +164,7 @@ export interface PropertyDetail {
   agCensusSummary: PropertyAgCensusSummary | null;
   timberSummary: PropertyTimberSummary | null;
   cropLossSummary: PropertyCropLossSummary | null;
+  countyEconomicSummary: PropertyCountyEconomicSummary | null;
 }
 
 export const BAND_OPTIONS: { value: OpportunityBand; label: string }[] = [
