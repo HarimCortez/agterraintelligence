@@ -5,6 +5,7 @@ import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { FemaFloodZoneIngestionService } from "../ingestion/fema-flood-zone-ingestion.service";
 import { FlParcelCadastralIngestionService } from "../ingestion/fl-parcel-cadastral-ingestion.service";
 import { UsdaSoilIngestionService } from "../ingestion/usda-soil-ingestion.service";
+import { WetlandsIngestionService } from "../ingestion/wetlands-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -20,6 +21,7 @@ export class AdminIngestionService {
     private readonly femaIngestion: FemaFloodZoneIngestionService,
     private readonly flParcelIngestion: FlParcelCadastralIngestionService,
     private readonly usdaSoilIngestion: UsdaSoilIngestionService,
+    private readonly wetlandsIngestion: WetlandsIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -79,6 +81,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_soil_data" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerWetlandsRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.wetlandsIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usfws_wetlands" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

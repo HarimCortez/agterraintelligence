@@ -71,6 +71,12 @@ export async function triggerUsdaSoilRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerWetlandsRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/wetlands/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the wetlands sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

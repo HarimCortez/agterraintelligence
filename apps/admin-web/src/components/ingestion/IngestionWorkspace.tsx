@@ -10,6 +10,7 @@ import {
   triggerFemaFloodZoneRun,
   triggerFlParcelRun,
   triggerUsdaSoilRun,
+  triggerWetlandsRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -21,11 +22,12 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the three real ingestion jobs that exist: FEMA
- * flood zone data, the FL DOR parcel cadastral sweep, and USDA NRCS soil
- * data. See `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
- * `fl-parcel-cadastral-ingestion.service.ts`, and
- * `usda-soil-ingestion.service.ts`'s doc comments for why all three are
+ * admin manually trigger, the four real ingestion jobs that exist: FEMA
+ * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
+ * and USFWS wetlands data. See
+ * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
+ * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
+ * and `wetlands-ingestion.service.ts`'s doc comments for why all four are
  * manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
@@ -90,6 +92,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerWetlandsMutation = useMutation({
+    mutationFn: () => triggerWetlandsRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -108,11 +119,12 @@ export function IngestionWorkspace() {
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Data Sources &amp; Ingestion</h1>
           <p className="text-sm text-text-secondary">
-            FEMA National Flood Hazard Layer, the Florida DOR parcel cadastral sweep, and USDA NRCS soil data — real,
-            manually-triggered ingestion runs. No other data sources have a live ingestion pipeline yet.
+            FEMA National Flood Hazard Layer, the Florida DOR parcel cadastral sweep, USDA NRCS soil data, and USFWS
+            wetlands data — real, manually-triggered ingestion runs. No other data sources have a live ingestion
+            pipeline yet.
           </p>
         </div>
-        <div className="flex shrink-0 gap-sm">
+        <div className="flex shrink-0 flex-wrap justify-end gap-sm">
           <button
             type="button"
             disabled={triggerFemaMutation.isPending || runInProgress}
@@ -137,10 +149,18 @@ export function IngestionWorkspace() {
           >
             {triggerSoilMutation.isPending || runInProgress ? "Running…" : "Run USDA Soil Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerWetlandsMutation.isPending || runInProgress}
+            onClick={() => triggerWetlandsMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerWetlandsMutation.isPending || runInProgress ? "Running…" : "Run Wetlands Sync"}
+          </button>
         </div>
       </header>
 
-      {[triggerFemaMutation, triggerParcelMutation, triggerSoilMutation].map(
+      {[triggerFemaMutation, triggerParcelMutation, triggerSoilMutation, triggerWetlandsMutation].map(
         (mutation, i) =>
           mutation.isError &&
           !(mutation.error instanceof ForbiddenError) && (
@@ -149,7 +169,10 @@ export function IngestionWorkspace() {
             </div>
           ),
       )}
-      {(triggerFemaMutation.isSuccess || triggerParcelMutation.isSuccess || triggerSoilMutation.isSuccess) && (
+      {(triggerFemaMutation.isSuccess ||
+        triggerParcelMutation.isSuccess ||
+        triggerSoilMutation.isSuccess ||
+        triggerWetlandsMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>
