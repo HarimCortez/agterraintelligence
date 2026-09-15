@@ -652,6 +652,12 @@ model PropertyCropCover {
 // all agricultural land uses pooled together (irrigated, cropland,
 // pastureland, timber, etc.) — a rough county benchmark for comparison,
 // not a same-land-use appraisal comp.
+//
+// `countyIrrigatedAcres` was added later (see `nass-ag-census-client.ts`'s
+// doc comment) as a third tracked metric from the same bulk file — not a
+// new external source, so it extends this job/table rather than a new
+// ingestion job. Water availability/irrigation is real, material context
+// for Florida ag land specifically.
 model PropertyAgCensusSummary {
   id String @id @default(uuid()) @db.Uuid
 
@@ -665,6 +671,8 @@ model PropertyAgCensusSummary {
   countyCattleInventoryHead Int? @map("county_cattle_inventory_head")
   /** County-wide average agricultural land (incl. buildings) value, in cents per acre, pooled across all land uses — null if NASS withheld the county total. */
   countyAgLandValueCentsPerAcre Int? @map("county_ag_land_value_cents_per_acre")
+  /** County-wide irrigated agricultural land, in acres, across all land uses — null if NASS withheld the county total. */
+  countyIrrigatedAcres Int? @map("county_irrigated_acres")
 
   ingestedAt DateTime @default(now()) @map("ingested_at")
 

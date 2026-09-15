@@ -246,7 +246,7 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
               {property.county} County-wide figures, not specific to this parcel — pooled across every agricultural
               land use in the county.
             </p>
-            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-2">
+            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-3">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
                   Avg. ag land value
@@ -268,6 +268,16 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
                 <dd className="text-sm text-text-primary">
                   {property.agCensusSummary.countyCattleInventoryHead !== null
                     ? `${property.agCensusSummary.countyCattleInventoryHead.toLocaleString("en-US")} head`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Irrigated acreage
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.agCensusSummary.countyIrrigatedAcres !== null
+                    ? `${property.agCensusSummary.countyIrrigatedAcres.toLocaleString("en-US")} ac`
                     : "—"}
                 </dd>
               </div>

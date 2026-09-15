@@ -52,6 +52,7 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     agCensusYear: null,
     agCensusCountyCattleInventoryHead: null,
     agCensusCountyAgLandValueCentsPerAcre: null,
+    agCensusCountyIrrigatedAcres: null,
     timberYear: null,
     timberCountyTimberlandAcres: null,
     timberCountyVolumeCuFtPerAcre: null,

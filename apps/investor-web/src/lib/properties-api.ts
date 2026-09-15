@@ -111,6 +111,7 @@ export interface PropertyAgCensusSummary {
   year: number;
   countyCattleInventoryHead: number | null;
   countyAgLandValueCentsPerAcre: number | null;
+  countyIrrigatedAcres: number | null;
 }
 
 /** Real USDA Forest Service FIA figures for the property's own COUNTY (not parcel-specific). */

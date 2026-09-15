@@ -80,6 +80,7 @@ export interface RawPropertyDetailRow {
   agCensusYear: number | null;
   agCensusCountyCattleInventoryHead: number | null;
   agCensusCountyAgLandValueCentsPerAcre: number | null;
+  agCensusCountyIrrigatedAcres: number | null;
   // Timber summary (null if no PropertyTimberSummary row exists for this property yet).
   // `timberYear` is the presence signal (always set when the row exists).
   timberYear: number | null;
@@ -239,6 +240,7 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
       year: row.agCensusYear,
       countyCattleInventoryHead: row.agCensusCountyCattleInventoryHead,
       countyAgLandValueCentsPerAcre: row.agCensusCountyAgLandValueCentsPerAcre,
+      countyIrrigatedAcres: row.agCensusCountyIrrigatedAcres,
     } satisfies PropertyAgCensusSummaryDto;
   } else {
     result.agCensusSummary = null;

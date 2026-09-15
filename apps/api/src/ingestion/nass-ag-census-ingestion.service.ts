@@ -87,7 +87,12 @@ export class NassAgCensusIngestionService {
       let recordsCreated = 0;
       for (const property of propertiesNeedingData) {
         const result = countyResults.get(normalizeCountyName(property.county));
-        if (!result || (result.countyCattleInventoryHead === null && result.countyAgLandValueCentsPerAcre === null)) {
+        if (
+          !result ||
+          (result.countyCattleInventoryHead === null &&
+            result.countyAgLandValueCentsPerAcre === null &&
+            result.countyIrrigatedAcres === null)
+        ) {
           continue;
         }
 
@@ -97,6 +102,7 @@ export class NassAgCensusIngestionService {
             year: CENSUS_YEAR,
             countyCattleInventoryHead: result.countyCattleInventoryHead,
             countyAgLandValueCentsPerAcre: result.countyAgLandValueCentsPerAcre,
+            countyIrrigatedAcres: result.countyIrrigatedAcres,
           },
         });
         recordsCreated++;

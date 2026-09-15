@@ -49,8 +49,8 @@ describe("NassAgCensusIngestionService", () => {
     ]);
     censusClientMock.fetchFloridaCountyResults.mockResolvedValue(
       new Map([
-        ["POLK", { countyCattleInventoryHead: 109225, countyAgLandValueCentsPerAcre: 714000 }],
-        ["DESOTO", { countyCattleInventoryHead: 65480, countyAgLandValueCentsPerAcre: 653100 }],
+        ["POLK", { countyCattleInventoryHead: 109225, countyAgLandValueCentsPerAcre: 714000, countyIrrigatedAcres: 77650 }],
+        ["DESOTO", { countyCattleInventoryHead: 65480, countyAgLandValueCentsPerAcre: 653100, countyIrrigatedAcres: 58322 }],
       ]),
     );
 
@@ -65,6 +65,7 @@ describe("NassAgCensusIngestionService", () => {
           year: 2022,
           countyCattleInventoryHead: 109225,
           countyAgLandValueCentsPerAcre: 714000,
+          countyIrrigatedAcres: 77650,
         }),
       }),
     );
@@ -81,10 +82,10 @@ describe("NassAgCensusIngestionService", () => {
     expect(result).toMatchObject({ status: "succeeded", recordsCreated: 0 });
   });
 
-  it("does not create a row when both tracked figures are null (NASS withheld both for that county)", async () => {
+  it("does not create a row when all three tracked figures are null (NASS withheld all of them for that county)", async () => {
     prismaMock.$queryRaw.mockResolvedValue([{ id: "prop-1", county: "Polk" }]);
     censusClientMock.fetchFloridaCountyResults.mockResolvedValue(
-      new Map([["POLK", { countyCattleInventoryHead: null, countyAgLandValueCentsPerAcre: null }]]),
+      new Map([["POLK", { countyCattleInventoryHead: null, countyAgLandValueCentsPerAcre: null, countyIrrigatedAcres: null }]]),
     );
 
     const result = await service.run();
@@ -93,17 +94,17 @@ describe("NassAgCensusIngestionService", () => {
     expect(result).toMatchObject({ status: "succeeded", recordsCreated: 0 });
   });
 
-  it("creates a row when only one of the two figures is available", async () => {
+  it("creates a row when only one of the three figures is available", async () => {
     prismaMock.$queryRaw.mockResolvedValue([{ id: "prop-1", county: "Polk" }]);
     censusClientMock.fetchFloridaCountyResults.mockResolvedValue(
-      new Map([["POLK", { countyCattleInventoryHead: null, countyAgLandValueCentsPerAcre: 714000 }]]),
+      new Map([["POLK", { countyCattleInventoryHead: null, countyAgLandValueCentsPerAcre: 714000, countyIrrigatedAcres: null }]]),
     );
 
     const result = await service.run();
 
     expect(prismaMock.propertyAgCensusSummary.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ countyCattleInventoryHead: null, countyAgLandValueCentsPerAcre: 714000 }),
+        data: expect.objectContaining({ countyCattleInventoryHead: null, countyAgLandValueCentsPerAcre: 714000, countyIrrigatedAcres: null }),
       }),
     );
     expect(result).toMatchObject({ recordsCreated: 1 });

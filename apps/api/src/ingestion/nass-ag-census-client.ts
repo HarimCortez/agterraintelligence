@@ -17,10 +17,12 @@ const CENSUS_FILE_URL = `https://www.nass.usda.gov/datasets/qs.census${CENSUS_YE
 
 const CATTLE_SHORT_DESC = "CATTLE, INCL CALVES - INVENTORY";
 const LAND_VALUE_SHORT_DESC = "AG LAND, INCL BUILDINGS - ASSET VALUE, MEASURED IN $ / ACRE";
+const IRRIGATED_ACRES_SHORT_DESC = "AG LAND, IRRIGATED - ACRES";
 
 export interface CountyAgCensusResult {
   countyCattleInventoryHead: number | null;
   countyAgLandValueCentsPerAcre: number | null;
+  countyIrrigatedAcres: number | null;
 }
 
 /**
@@ -37,12 +39,12 @@ export interface CountyAgCensusResult {
  *
  * Mechanics: streams the ~300MB gzip file (Node's built-in `https` +
  * `zlib.createGunzip()` + `readline`, never buffering the whole file in
- * memory) and keeps only Florida county-level rows matching one of the two
+ * memory) and keeps only Florida county-level rows matching one of the three
  * tracked metrics. Verified live before building the ingestion job: a full
  * real run over the actual 2022 file completes in under a minute on a
  * normal connection.
  *
- * Only two metrics are tracked, deliberately narrow:
+ * Three metrics are tracked, deliberately narrow:
  * - `CATTLE, INCL CALVES - INVENTORY` (domain "TOTAL") — county-wide
  *   cattle headcount, relevant to pasture/mixed-agricultural land.
  * - `AG LAND, INCL BUILDINGS - ASSET VALUE, MEASURED IN $ / ACRE` (domain
@@ -50,8 +52,18 @@ export interface CountyAgCensusResult {
  *   every agricultural land use in the county (not the same as a precise
  *   same-land-use appraisal comp, but a real, useful county benchmark
  *   against a property's own price/acre).
+ * - `AG LAND, IRRIGATED - ACRES` (domain "TOTAL") — county-wide irrigated
+ *   acreage across all agricultural land uses, added later as a third
+ *   metric from this same bulk file rather than a new ingestion job (see
+ *   `PropertyAgCensusSummary`'s doc comment). Water availability is real,
+ *   material context for Florida ag land specifically. Confirmed live that
+ *   the file also carries an irrigation-status *breakout* of the land-value
+ *   figure (short_desc "AG LAND - ACRES", domain "IRRIGATION STATUS: (ANY
+ *   ON OPERATION)") — deliberately not the metric tracked here, since its
+ *   domain isn't "TOTAL" and mixing it in would double-count against the
+ *   land-value figure above.
  *
- * Both are Census-of-Agriculture-only (published every 5 years) because
+ * All three are Census-of-Agriculture-only (published every 5 years) because
  * that's the only NASS program with COUNTY granularity for these figures —
  * confirmed live in the Quick Stats query tool that the annual Survey
  * program (which would give fresher, non-Census-year numbers) only
@@ -73,7 +85,7 @@ export class NassAgCensusClient {
   /**
    * Downloads and parses the full bulk file once, returning a lookup keyed
    * by normalized county name for every Florida county with COUNTY-level
-   * data for the two tracked metrics — not scoped to a specific county
+   * data for the three tracked metrics — not scoped to a specific county
    * list, since the file contains every Florida county regardless and a
    * second download per county would be strictly worse than parsing once.
    */
@@ -88,12 +100,15 @@ export class NassAgCensusClient {
       const existing = results.get(parsed.normalizedCounty) ?? {
         countyCattleInventoryHead: null,
         countyAgLandValueCentsPerAcre: null,
+        countyIrrigatedAcres: null,
       };
 
       if (parsed.metric === "cattle") {
         existing.countyCattleInventoryHead = parsed.value;
-      } else {
+      } else if (parsed.metric === "landValue") {
         existing.countyAgLandValueCentsPerAcre = Math.round(parsed.value * 100);
+      } else {
+        existing.countyIrrigatedAcres = Math.round(parsed.value);
       }
 
       results.set(parsed.normalizedCounty, existing);
@@ -127,7 +142,7 @@ export class NassAgCensusClient {
 
 interface ParsedCensusLine {
   normalizedCounty: string;
-  metric: "cattle" | "landValue";
+  metric: "cattle" | "landValue" | "irrigatedAcres";
   value: number;
 }
 
@@ -139,7 +154,7 @@ export function normalizeCountyName(county: string): string {
 /**
  * Parses one tab-delimited row of the NASS bulk export format. Returns null
  * for any row that isn't a Florida COUNTY-level Census row matching one of
- * the two tracked short_desc/domain combinations, or whose VALUE is a
+ * the three tracked short_desc/domain combinations, or whose VALUE is a
  * non-numeric NASS disclosure/quality sentinel (e.g. "(D)" for withheld).
  * Exported standalone (not a private method) so it can be unit tested
  * directly against real sample lines without touching the network.
@@ -160,11 +175,13 @@ export function parseCensusLine(line: string): ParsedCensusLine | null {
   if (domainDesc !== "TOTAL") return null;
   if (countyName === undefined || countyName === "") return null;
 
-  let metric: "cattle" | "landValue";
+  let metric: "cattle" | "landValue" | "irrigatedAcres";
   if (shortDesc === CATTLE_SHORT_DESC) {
     metric = "cattle";
   } else if (shortDesc === LAND_VALUE_SHORT_DESC) {
     metric = "landValue";
+  } else if (shortDesc === IRRIGATED_ACRES_SHORT_DESC) {
+    metric = "irrigatedAcres";
   } else {
     return null;
   }
