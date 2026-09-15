@@ -5,8 +5,16 @@ const APHIS_QUARANTINE_QUERY_URL =
 
 const FIRE_ANT_PROGRAM = "Imported Fire Ant";
 
+/**
+ * Statuses treated as a currently-in-effect quarantine. Deliberately
+ * excludes `Rescinded Federal Quarantine` (eradication succeeded, no
+ * longer in effect) and `Pending Federal Quarantine` (not yet in effect) —
+ * see this client's doc comment for the real bug this avoids.
+ */
+const ACTIVE_STATUSES = ["Active Federal Quarantine", "Modified Federal Quarantine"];
+
 export interface QuarantineResult {
-  /** e.g. "Active Federal Quarantine", "Modified Federal Quarantine". */
+  /** "Active Federal Quarantine" or "Modified Federal Quarantine" — never a rescinded/pending status, filtered server-side. */
   status: string;
 }
 
@@ -45,15 +53,27 @@ interface QuarantineQueryResponse {
  * match rows (see `CitrusQuarantineClient`'s doc comment), so the mapping
  * needs to go through the full-name field, not swap to the abbreviation
  * field as a shortcut.
+ *
+ * Filters `Quarantine_Status IN ('Active Federal Quarantine', 'Modified
+ * Federal Quarantine')` server-side (fix mirrored from
+ * `AsianLonghornedBeetleQuarantineClient`, which is where this bug was
+ * originally found and fixed) — the same live FeatureServer contains real
+ * `Rescinded Federal Quarantine` rows for other programs/counties, and this
+ * client previously treated any returned row as "currently quarantined"
+ * regardless of status. It never surfaced as a bug for Florida's Imported
+ * Fire Ant counties specifically because every county checked so far
+ * happened to have at most one live record with an active-style status,
+ * not because the unfiltered query was actually safe.
  */
 @Injectable()
 export class FireAntQuarantineClient {
   private readonly logger = new Logger(FireAntQuarantineClient.name);
 
-  /** Returns null if the county has no active Imported Fire Ant quarantine record, or if the request fails. */
+  /** Returns null if the county has no currently-active Imported Fire Ant quarantine record, or if the request fails. */
   async queryCountyStatus(county: string): Promise<QuarantineResult | null> {
+    const statusClause = ACTIVE_STATUSES.map((s) => `'${s}'`).join(",");
     const params = new URLSearchParams({
-      where: `Quarantine_State='Florida' AND Quarantine_Program='${FIRE_ANT_PROGRAM}' AND Quarantine_County='${county}'`,
+      where: `Quarantine_State='Florida' AND Quarantine_Program='${FIRE_ANT_PROGRAM}' AND Quarantine_County='${county}' AND Quarantine_Status IN (${statusClause})`,
       outFields: "Quarantine_Status",
       returnGeometry: "false",
       f: "json",

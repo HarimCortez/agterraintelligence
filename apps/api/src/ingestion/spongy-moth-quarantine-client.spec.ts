@@ -21,6 +21,18 @@ describe("SpongyMothQuarantineClient", () => {
     expect(result).toEqual({ status: "Active Federal Quarantine" });
   });
 
+  it("filters Quarantine_Status server-side to only active/modified statuses — never surfaces a real rescinded record as if it were still in effect", async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ features: [] }) });
+
+    await client.queryCountyStatus("Sauk");
+
+    const requestedUrl = fetchMock.mock.calls[0]![0] as string;
+    expect(requestedUrl).toContain("Quarantine_Status+IN+%28");
+    expect(requestedUrl).toContain("Active+Federal+Quarantine");
+    expect(requestedUrl).toContain("Modified+Federal+Quarantine");
+    expect(requestedUrl).not.toContain("Rescinded");
+  });
+
   it("returns null (real, confirmed outcome, not a broken query) for a Florida county — Florida has zero real Spongy Moth quarantine rows", async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ features: [] }) });
 

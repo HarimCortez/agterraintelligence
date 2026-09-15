@@ -1,22 +1,22 @@
-import { FireAntQuarantineClient } from "./fire-ant-quarantine-client";
+import { CitrusQuarantineClient } from "./citrus-quarantine-client";
 
-describe("FireAntQuarantineClient", () => {
-  let client: FireAntQuarantineClient;
+describe("CitrusQuarantineClient", () => {
+  let client: CitrusQuarantineClient;
   const fetchMock = jest.fn();
 
   beforeEach(() => {
-    client = new FireAntQuarantineClient();
+    client = new CitrusQuarantineClient();
     global.fetch = fetchMock;
     jest.clearAllMocks();
   });
 
-  it("parses a real active quarantine hit (Polk County, captured live while verifying this source)", async () => {
+  it("parses a real active quarantine hit (DeSoto County, captured live while verifying this source)", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ features: [{ attributes: { Quarantine_Status: "Active Federal Quarantine" } }] }),
     });
 
-    const result = await client.queryCountyStatus("Polk");
+    const result = await client.queryCountyStatus("DeSoto");
 
     expect(result).toEqual({ status: "Active Federal Quarantine" });
   });
@@ -24,7 +24,7 @@ describe("FireAntQuarantineClient", () => {
   it("filters Quarantine_Status server-side to only active/modified statuses — never surfaces a real rescinded record as if it were still in effect", async () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ features: [] }) });
 
-    await client.queryCountyStatus("Polk");
+    await client.queryCountyStatus("DeSoto");
 
     const requestedUrl = fetchMock.mock.calls[0]![0] as string;
     expect(requestedUrl).toContain("Quarantine_Status+IN+%28");
