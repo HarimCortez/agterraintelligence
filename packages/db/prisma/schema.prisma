@@ -803,6 +803,13 @@ model PropertyCropLossSummary {
 // Swept across every property, same as `PropertyAgCensusSummary` and
 // `PropertyCropLossSummary` — county economic context is relevant
 // background regardless of the property's `landUseType`.
+//
+// `countyRuralUrbanContinuumCode` was added later as a fourth tracked
+// metric — not a new external source, same reasoning as
+// `PropertyAgCensusSummary.countyIrrigatedAcres`: it's a column already
+// present in the same Population Estimates CSV this job downloads
+// (`Rural_Urban_Continuum_Code_2023`), so it shares `populationYear`'s
+// vintage rather than getting its own year field.
 model PropertyCountyEconomicSummary {
   id String @id @default(uuid()) @db.Uuid
 
@@ -815,6 +822,8 @@ model PropertyCountyEconomicSummary {
   countyPopulation Int? @map("county_population")
   /** Net migration (domestic + international, minus residual) for `populationYear` — can be negative (population decline). A real signal of growth/decline pressure, not derived from the population figure above. */
   countyNetMigration Int? @map("county_net_migration")
+  /** ERS's Rural-Urban Continuum Code for `populationYear`: 1 (large metro core, 1M+) through 9 (most rural, not adjacent to a metro area) — the standard ERS metro/nonmetro classification, real signal of development pressure vs. rural character. */
+  countyRuralUrbanContinuumCode Int? @map("county_rural_urban_continuum_code")
 
   /** The vintage year of `countyUnemploymentRatePct`, e.g. 2023. */
   unemploymentYear Int @map("unemployment_year")

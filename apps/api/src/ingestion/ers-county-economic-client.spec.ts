@@ -8,7 +8,9 @@ import { ErsCountyEconomicClient, normalizeCountyName, parseCountyName, parseErs
 const POPULATION_HEADER = "FIPStxt,State,Area_Name,Attribute,Value";
 const POLK_POP_ESTIMATE_LINE = "12105,FL,Polk County,POP_ESTIMATE_2023,818330";
 const POLK_NET_MIG_LINE = "12105,FL,Polk County,NET_MIG_2023,29364";
+const POLK_RUCC_LINE = "12105,FL,Polk County,Rural_Urban_Continuum_Code_2023,2";
 const DESOTO_POP_LINE = "12027,FL,DeSoto County,POP_ESTIMATE_2023,35822";
+const DESOTO_RUCC_LINE = "12027,FL,DeSoto County,Rural_Urban_Continuum_Code_2023,6";
 const FLORIDA_STATE_TOTAL_LINE = "12000,FL,Florida,POP_ESTIMATE_2023,22610726";
 const ALABAMA_COUNTY_LINE = "01001,AL,Autauga County,POP_ESTIMATE_2023,60342";
 
@@ -83,11 +85,16 @@ describe("ErsCountyEconomicClient", () => {
     });
   }
 
-  it("merges population and unemployment/income figures for the same real county", async () => {
+  it("merges population, RUCC, and unemployment/income figures for the same real county", async () => {
     mockResponses(
-      [POPULATION_HEADER, POLK_POP_ESTIMATE_LINE, POLK_NET_MIG_LINE, FLORIDA_STATE_TOTAL_LINE, ALABAMA_COUNTY_LINE].join(
-        "\n",
-      ),
+      [
+        POPULATION_HEADER,
+        POLK_POP_ESTIMATE_LINE,
+        POLK_NET_MIG_LINE,
+        POLK_RUCC_LINE,
+        FLORIDA_STATE_TOTAL_LINE,
+        ALABAMA_COUNTY_LINE,
+      ].join("\n"),
       [UNEMPLOYMENT_HEADER, POLK_UNEMPLOYMENT_LINE, POLK_INCOME_LINE].join("\n"),
     );
 
@@ -97,11 +104,20 @@ describe("ErsCountyEconomicClient", () => {
       populationYear: 2023,
       countyPopulation: 818330,
       countyNetMigration: 29364,
+      countyRuralUrbanContinuumCode: 2,
       unemploymentYear: 2023,
       countyUnemploymentRatePct: 3.7,
       incomeYear: 2022,
       countyMedianHouseholdIncomeCents: 6194100,
     });
+  });
+
+  it("picks up a real distinct RUCC value for a more rural county (DeSoto: 6, vs. Polk's 2)", async () => {
+    mockResponses([POPULATION_HEADER, DESOTO_RUCC_LINE].join("\n"), [UNEMPLOYMENT_HEADER].join("\n"));
+
+    const results = await client.fetchFloridaCountyResults();
+
+    expect(results.get(normalizeCountyName("DeSoto"))?.countyRuralUrbanContinuumCode).toBe(6);
   });
 
   it("excludes the state-level total row and non-Florida counties", async () => {
@@ -124,6 +140,7 @@ describe("ErsCountyEconomicClient", () => {
       populationYear: 2023,
       countyPopulation: 35822,
       countyNetMigration: null,
+      countyRuralUrbanContinuumCode: null,
       unemploymentYear: 2023,
       countyUnemploymentRatePct: null,
       incomeYear: 2022,
@@ -140,6 +157,7 @@ describe("ErsCountyEconomicClient", () => {
       populationYear: 2023,
       countyPopulation: 35822,
       countyNetMigration: null,
+      countyRuralUrbanContinuumCode: null,
       unemploymentYear: 2023,
       countyUnemploymentRatePct: 4.9,
       incomeYear: 2022,

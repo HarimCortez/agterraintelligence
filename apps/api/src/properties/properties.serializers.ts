@@ -101,6 +101,7 @@ export interface RawPropertyDetailRow {
   economicPopulationYear: number | null;
   economicCountyPopulation: number | null;
   economicCountyNetMigration: number | null;
+  economicCountyRuralUrbanContinuumCode: number | null;
   economicUnemploymentYear: number | null;
   economicCountyUnemploymentRatePct: string | null; // Decimal, stringified
   economicIncomeYear: number | null;
@@ -281,6 +282,7 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
       populationYear: row.economicPopulationYear,
       countyPopulation: row.economicCountyPopulation,
       countyNetMigration: row.economicCountyNetMigration,
+      countyRuralUrbanContinuumCode: row.economicCountyRuralUrbanContinuumCode,
       unemploymentYear: row.economicUnemploymentYear!,
       countyUnemploymentRatePct:
         row.economicCountyUnemploymentRatePct !== null ? parseFloat(row.economicCountyUnemploymentRatePct) : null,

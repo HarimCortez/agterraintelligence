@@ -87,6 +87,7 @@ export class ErsCountyEconomicIngestionService {
           !result ||
           (result.countyPopulation === null &&
             result.countyNetMigration === null &&
+            result.countyRuralUrbanContinuumCode === null &&
             result.countyUnemploymentRatePct === null &&
             result.countyMedianHouseholdIncomeCents === null)
         ) {
@@ -99,6 +100,7 @@ export class ErsCountyEconomicIngestionService {
             populationYear: result.populationYear,
             countyPopulation: result.countyPopulation,
             countyNetMigration: result.countyNetMigration,
+            countyRuralUrbanContinuumCode: result.countyRuralUrbanContinuumCode,
             unemploymentYear: result.unemploymentYear,
             countyUnemploymentRatePct: result.countyUnemploymentRatePct,
             incomeYear: result.incomeYear,

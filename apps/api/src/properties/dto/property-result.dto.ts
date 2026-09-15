@@ -66,6 +66,7 @@ export interface PropertyCountyEconomicSummaryDto {
   populationYear: number;
   countyPopulation: number | null;
   countyNetMigration: number | null;
+  countyRuralUrbanContinuumCode: number | null;
   unemploymentYear: number;
   countyUnemploymentRatePct: number | null;
   incomeYear: number;

@@ -64,6 +64,7 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     economicPopulationYear: null,
     economicCountyPopulation: null,
     economicCountyNetMigration: null,
+    economicCountyRuralUrbanContinuumCode: null,
     economicUnemploymentYear: null,
     economicCountyUnemploymentRatePct: null,
     economicIncomeYear: null,

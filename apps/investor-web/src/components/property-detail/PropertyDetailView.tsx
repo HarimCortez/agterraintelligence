@@ -16,6 +16,7 @@ import {
   formatLandUseType,
   formatListingStatus,
   formatRiskType,
+  formatRuralUrbanContinuumCode,
 } from "@/lib/formatters";
 
 // Mapbox GL JS touches `window` at module-import time — same `ssr: false`
@@ -349,7 +350,7 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
               {property.county} County-wide figures, not specific to this parcel — population and local economic
               conditions, relevant background for a land investment thesis.
             </p>
-            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-5">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
                   Population
@@ -367,6 +368,16 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
                 <dd className="text-sm text-text-primary">
                   {property.countyEconomicSummary.countyNetMigration !== null
                     ? property.countyEconomicSummary.countyNetMigration.toLocaleString("en-US", { signDisplay: "exceptZero" })
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Rural-urban classification
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.countyEconomicSummary.countyRuralUrbanContinuumCode !== null
+                    ? formatRuralUrbanContinuumCode(property.countyEconomicSummary.countyRuralUrbanContinuumCode)
                     : "—"}
                 </dd>
               </div>
@@ -396,8 +407,8 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
               </div>
             </dl>
             <p className="text-xs text-text-secondary">
-              Source: USDA ERS (Economic Research Service). Population and net migration are{" "}
-              {property.countyEconomicSummary.populationYear}; unemployment rate is{" "}
+              Source: USDA ERS (Economic Research Service). Population, net migration, and rural-urban
+              classification are {property.countyEconomicSummary.populationYear}; unemployment rate is{" "}
               {property.countyEconomicSummary.unemploymentYear}; median household income is{" "}
               {property.countyEconomicSummary.incomeYear} (ERS&apos;s own source data publishes income figures a
               year behind unemployment).

@@ -42,6 +42,18 @@ import { Injectable, Logger } from "@nestjs/common";
  * whitespace) — ERS spells DeSoto County as "DeSoto", matching this
  * project's own spelling (same as FIA, unlike NASS's "DE SOTO" and RMA's
  * "De Soto").
+ *
+ * `countyRuralUrbanContinuumCode` was added later as a fourth tracked
+ * metric — not a new external source, same reasoning as
+ * `NassAgCensusClient`'s `countyIrrigatedAcres`: ERS's Rural-Urban
+ * Continuum Code (`Rural_Urban_Continuum_Code_2023`, 1 = large metro core
+ * through 9 = most rural) already sits in the same population file this
+ * client downloads, alongside `POP_ESTIMATE_2023`/`NET_MIG_2023` — real,
+ * meaningful variance confirmed live across this project's seeded counties
+ * (Polk: 2, Highlands: 3, Okeechobee: 4, DeSoto/Hardee: 6), unlike a
+ * separately-checked USDA Forest Service pest/disease detection dataset
+ * that turned out too sparse in Central/South Florida to be useful for
+ * this property set and wasn't pursued.
  */
 const POPULATION_YEAR = 2023;
 const UNEMPLOYMENT_YEAR = 2023;
@@ -54,6 +66,7 @@ const UNEMPLOYMENT_INCOME_FILE_URL =
 
 const POP_ESTIMATE_ATTR = `POP_ESTIMATE_${POPULATION_YEAR}`;
 const NET_MIG_ATTR = `NET_MIG_${POPULATION_YEAR}`;
+const RUCC_ATTR = `Rural_Urban_Continuum_Code_${POPULATION_YEAR}`;
 const UNEMPLOYMENT_RATE_ATTR = `Unemployment_rate_${UNEMPLOYMENT_YEAR}`;
 const MEDIAN_INCOME_ATTR = `Median_Household_Income_${INCOME_YEAR}`;
 
@@ -61,6 +74,7 @@ export interface CountyEconomicResult {
   populationYear: number;
   countyPopulation: number | null;
   countyNetMigration: number | null;
+  countyRuralUrbanContinuumCode: number | null;
   unemploymentYear: number;
   countyUnemploymentRatePct: number | null;
   incomeYear: number;
@@ -93,6 +107,7 @@ export class ErsCountyEconomicClient {
         populationYear: POPULATION_YEAR,
         countyPopulation: null,
         countyNetMigration: null,
+        countyRuralUrbanContinuumCode: null,
         unemploymentYear: UNEMPLOYMENT_YEAR,
         countyUnemploymentRatePct: null,
         incomeYear: INCOME_YEAR,
@@ -115,6 +130,8 @@ export class ErsCountyEconomicClient {
         record.countyPopulation = Math.round(numericValue);
       } else if (row.attribute === NET_MIG_ATTR) {
         record.countyNetMigration = Math.round(numericValue);
+      } else if (row.attribute === RUCC_ATTR) {
+        record.countyRuralUrbanContinuumCode = Math.round(numericValue);
       }
     }
 

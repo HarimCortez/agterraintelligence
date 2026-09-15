@@ -53,3 +53,22 @@ export function formatRiskType(value: string): string {
   const [first, ...rest] = words;
   return [`${first!.charAt(0).toUpperCase()}${first!.slice(1)}`, ...rest].join(" ");
 }
+
+/** USDA ERS's own 1-9 Rural-Urban Continuum Code scheme — see ers.usda.gov/data-products/rural-urban-continuum-codes. */
+const RUCC_LABELS: Record<number, string> = {
+  1: "Metro (1M+)",
+  2: "Metro (250k–1M)",
+  3: "Metro (<250k)",
+  4: "Nonmetro, urban 20k+, metro-adjacent",
+  5: "Nonmetro, urban 20k+",
+  6: "Nonmetro, urban 2.5k–20k, metro-adjacent",
+  7: "Nonmetro, urban 2.5k–20k",
+  8: "Nonmetro, rural, metro-adjacent",
+  9: "Nonmetro, rural",
+};
+
+/** Formats a USDA ERS Rural-Urban Continuum Code (1-9) as "2 · Metro (250k-1M)" — the bare number alone isn't meaningful without ERS's own category label. */
+export function formatRuralUrbanContinuumCode(code: number): string {
+  const label = RUCC_LABELS[code];
+  return label ? `${code} · ${label}` : String(code);
+}

@@ -257,6 +257,7 @@ export class PropertiesService {
         pces.population_year AS "economicPopulationYear",
         pces.county_population AS "economicCountyPopulation",
         pces.county_net_migration AS "economicCountyNetMigration",
+        pces.county_rural_urban_continuum_code AS "economicCountyRuralUrbanContinuumCode",
         pces.unemployment_year AS "economicUnemploymentYear",
         pces.county_unemployment_rate_pct AS "economicCountyUnemploymentRatePct",
         pces.income_year AS "economicIncomeYear",
@@ -286,6 +287,7 @@ export class PropertiesService {
                pcls.year, pcls.county_top_cause_of_loss, pcls.county_top_cause_of_loss_indemnity_cents,
                pcls.county_total_indemnity_cents,
                pces.population_year, pces.county_population, pces.county_net_migration,
+               pces.county_rural_urban_continuum_code,
                pces.unemployment_year, pces.county_unemployment_rate_pct,
                pces.income_year, pces.county_median_household_income_cents
     `;
