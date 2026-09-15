@@ -121,6 +121,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerSpongyMothQuarantineRun(admin);
   }
 
+  @Post("asian-longhorned-beetle-quarantine/run")
+  @RequirePermission("ingestion.run")
+  triggerAsianLonghornedBeetleQuarantineRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerAsianLonghornedBeetleQuarantineRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

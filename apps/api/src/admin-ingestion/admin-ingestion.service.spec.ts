@@ -28,6 +28,7 @@ import { UsdaRdEligibilityIngestionService } from "../ingestion/usda-rd-eligibil
 import { UsdaForestHealthIngestionService } from "../ingestion/usda-forest-health-ingestion.service";
 import { FireAntQuarantineIngestionService } from "../ingestion/fire-ant-quarantine-ingestion.service";
 import { SpongyMothQuarantineIngestionService } from "../ingestion/spongy-moth-quarantine-ingestion.service";
+import { AsianLonghornedBeetleQuarantineIngestionService } from "../ingestion/asian-longhorned-beetle-quarantine-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -60,6 +61,7 @@ describe("AdminIngestionService", () => {
   const usdaForestHealthIngestionMock = { trigger: jest.fn() };
   const fireAntQuarantineIngestionMock = { trigger: jest.fn() };
   const spongyMothQuarantineIngestionMock = { trigger: jest.fn() };
+  const asianLonghornedBeetleQuarantineIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -83,6 +85,7 @@ describe("AdminIngestionService", () => {
         { provide: UsdaForestHealthIngestionService, useValue: usdaForestHealthIngestionMock },
         { provide: FireAntQuarantineIngestionService, useValue: fireAntQuarantineIngestionMock },
         { provide: SpongyMothQuarantineIngestionService, useValue: spongyMothQuarantineIngestionMock },
+        { provide: AsianLonghornedBeetleQuarantineIngestionService, useValue: asianLonghornedBeetleQuarantineIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -608,6 +611,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-15",
           metadata: { source: "usda_aphis_spongy_moth_quarantine" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerAsianLonghornedBeetleQuarantineRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      asianLonghornedBeetleQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-16" });
+
+      const result = await service.triggerAsianLonghornedBeetleQuarantineRun(ADMIN);
+
+      expect(asianLonghornedBeetleQuarantineIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-16",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_aphis_asian_longhorned_beetle_quarantine source", async () => {
+      asianLonghornedBeetleQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-16" });
+
+      await service.triggerAsianLonghornedBeetleQuarantineRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-16",
+          metadata: { source: "usda_aphis_asian_longhorned_beetle_quarantine" },
         }),
       );
     });

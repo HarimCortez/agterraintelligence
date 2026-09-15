@@ -17,6 +17,7 @@ import { UsdaRdEligibilityIngestionService } from "../ingestion/usda-rd-eligibil
 import { UsdaForestHealthIngestionService } from "../ingestion/usda-forest-health-ingestion.service";
 import { FireAntQuarantineIngestionService } from "../ingestion/fire-ant-quarantine-ingestion.service";
 import { SpongyMothQuarantineIngestionService } from "../ingestion/spongy-moth-quarantine-ingestion.service";
+import { AsianLonghornedBeetleQuarantineIngestionService } from "../ingestion/asian-longhorned-beetle-quarantine-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -44,6 +45,7 @@ export class AdminIngestionService {
     private readonly usdaForestHealthIngestion: UsdaForestHealthIngestionService,
     private readonly fireAntQuarantineIngestion: FireAntQuarantineIngestionService,
     private readonly spongyMothQuarantineIngestion: SpongyMothQuarantineIngestionService,
+    private readonly asianLonghornedBeetleQuarantineIngestion: AsianLonghornedBeetleQuarantineIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -283,6 +285,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_spongy_moth_quarantine" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerAsianLonghornedBeetleQuarantineRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.asianLonghornedBeetleQuarantineIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_asian_longhorned_beetle_quarantine" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

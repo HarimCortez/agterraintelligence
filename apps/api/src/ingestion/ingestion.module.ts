@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { AsianLonghornedBeetleQuarantineClient } from "./asian-longhorned-beetle-quarantine-client";
+import { AsianLonghornedBeetleQuarantineIngestionService } from "./asian-longhorned-beetle-quarantine-ingestion.service";
 import { CitrusBlackSpotClient } from "./citrus-black-spot-client";
 import { CitrusBlackSpotIngestionService } from "./citrus-black-spot-ingestion.service";
 import { CitrusQuarantineClient } from "./citrus-quarantine-client";
@@ -31,7 +33,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Fifteen sources: FEMA flood zones
+ * Real external-data ingestion module. Sixteen sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -68,11 +70,16 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * `FireAntQuarantineIngestionService`'s doc comment — same underlying
  * federal quarantine dataset as the two citrus jobs, a different real
  * `Quarantine_Program` value, swept across every property rather than one
- * land use), and the USDA APHIS Spongy Moth quarantine (see
+ * land use), the USDA APHIS Spongy Moth quarantine (see
  * `SpongyMothQuarantineIngestionService`'s doc comment — the largest real
  * program on that same quarantine layer, 620 county-level records
- * nationwide, scoped to timber properties).
- * Exports all fifteen ingestion services so `AdminIngestionModule` can
+ * nationwide, scoped to timber properties), and the USDA APHIS Asian
+ * Longhorned Beetle quarantine (see
+ * `AsianLonghornedBeetleQuarantineIngestionService`'s doc comment — the
+ * first of the four quarantine jobs to filter `Quarantine_Status`
+ * server-side, avoiding a real latent bug where a rescinded/lifted
+ * quarantine could otherwise be surfaced as still active).
+ * Exports all sixteen ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -110,6 +117,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     FireAntQuarantineIngestionService,
     SpongyMothQuarantineClient,
     SpongyMothQuarantineIngestionService,
+    AsianLonghornedBeetleQuarantineClient,
+    AsianLonghornedBeetleQuarantineIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -127,6 +136,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     UsdaForestHealthIngestionService,
     FireAntQuarantineIngestionService,
     SpongyMothQuarantineIngestionService,
+    AsianLonghornedBeetleQuarantineIngestionService,
   ],
 })
 export class IngestionModule {}
