@@ -19,6 +19,8 @@ import { NassAgCensusClient } from "./nass-ag-census-client";
 import { NassAgCensusIngestionService } from "./nass-ag-census-ingestion.service";
 import { RmaCauseOfLossClient } from "./rma-cause-of-loss-client";
 import { RmaCauseOfLossIngestionService } from "./rma-cause-of-loss-ingestion.service";
+import { SpongyMothQuarantineClient } from "./spongy-moth-quarantine-client";
+import { SpongyMothQuarantineIngestionService } from "./spongy-moth-quarantine-ingestion.service";
 import { UsdaForestHealthClient } from "./usda-forest-health-client";
 import { UsdaForestHealthIngestionService } from "./usda-forest-health-ingestion.service";
 import { UsdaRdEligibilityClient } from "./usda-rd-eligibility-client";
@@ -29,7 +31,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Fourteen sources: FEMA flood zones
+ * Real external-data ingestion module. Fifteen sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -66,8 +68,11 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * `FireAntQuarantineIngestionService`'s doc comment — same underlying
  * federal quarantine dataset as the two citrus jobs, a different real
  * `Quarantine_Program` value, swept across every property rather than one
- * land use).
- * Exports all fourteen ingestion services so `AdminIngestionModule` can
+ * land use), and the USDA APHIS Spongy Moth quarantine (see
+ * `SpongyMothQuarantineIngestionService`'s doc comment — the largest real
+ * program on that same quarantine layer, 620 county-level records
+ * nationwide, scoped to timber properties).
+ * Exports all fifteen ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -103,6 +108,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     UsdaForestHealthIngestionService,
     FireAntQuarantineClient,
     FireAntQuarantineIngestionService,
+    SpongyMothQuarantineClient,
+    SpongyMothQuarantineIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -119,6 +126,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     UsdaRdEligibilityIngestionService,
     UsdaForestHealthIngestionService,
     FireAntQuarantineIngestionService,
+    SpongyMothQuarantineIngestionService,
   ],
 })
 export class IngestionModule {}

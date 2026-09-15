@@ -27,6 +27,7 @@ import { ErsCountyEconomicIngestionService } from "../ingestion/ers-county-econo
 import { UsdaRdEligibilityIngestionService } from "../ingestion/usda-rd-eligibility-ingestion.service";
 import { UsdaForestHealthIngestionService } from "../ingestion/usda-forest-health-ingestion.service";
 import { FireAntQuarantineIngestionService } from "../ingestion/fire-ant-quarantine-ingestion.service";
+import { SpongyMothQuarantineIngestionService } from "../ingestion/spongy-moth-quarantine-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -58,6 +59,7 @@ describe("AdminIngestionService", () => {
   const usdaRdEligibilityIngestionMock = { trigger: jest.fn() };
   const usdaForestHealthIngestionMock = { trigger: jest.fn() };
   const fireAntQuarantineIngestionMock = { trigger: jest.fn() };
+  const spongyMothQuarantineIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -80,6 +82,7 @@ describe("AdminIngestionService", () => {
         { provide: UsdaRdEligibilityIngestionService, useValue: usdaRdEligibilityIngestionMock },
         { provide: UsdaForestHealthIngestionService, useValue: usdaForestHealthIngestionMock },
         { provide: FireAntQuarantineIngestionService, useValue: fireAntQuarantineIngestionMock },
+        { provide: SpongyMothQuarantineIngestionService, useValue: spongyMothQuarantineIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -571,6 +574,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-14",
           metadata: { source: "usda_aphis_fire_ant_quarantine" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerSpongyMothQuarantineRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      spongyMothQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-15" });
+
+      const result = await service.triggerSpongyMothQuarantineRun(ADMIN);
+
+      expect(spongyMothQuarantineIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-15",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_aphis_spongy_moth_quarantine source", async () => {
+      spongyMothQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-15" });
+
+      await service.triggerSpongyMothQuarantineRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-15",
+          metadata: { source: "usda_aphis_spongy_moth_quarantine" },
         }),
       );
     });
