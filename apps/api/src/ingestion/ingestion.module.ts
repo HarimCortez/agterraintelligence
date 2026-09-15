@@ -17,6 +17,8 @@ import { NassAgCensusClient } from "./nass-ag-census-client";
 import { NassAgCensusIngestionService } from "./nass-ag-census-ingestion.service";
 import { RmaCauseOfLossClient } from "./rma-cause-of-loss-client";
 import { RmaCauseOfLossIngestionService } from "./rma-cause-of-loss-ingestion.service";
+import { UsdaForestHealthClient } from "./usda-forest-health-client";
+import { UsdaForestHealthIngestionService } from "./usda-forest-health-ingestion.service";
 import { UsdaRdEligibilityClient } from "./usda-rd-eligibility-client";
 import { UsdaRdEligibilityIngestionService } from "./usda-rd-eligibility-ingestion.service";
 import { UsdaSoilClient } from "./usda-soil-client";
@@ -25,7 +27,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Twelve sources: FEMA flood zones
+ * Real external-data ingestion module. Thirteen sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -53,8 +55,12 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * USDA Rural Development Eligibility MapServer (see
  * `UsdaRdEligibilityIngestionService`'s doc comment — real-estate
  * financing context: which RD loan programs, if any, a property is
- * ineligible for at its own coordinates).
- * Exports all twelve ingestion services so `AdminIngestionModule` can
+ * ineligible for at its own coordinates), and the USDA Forest Service
+ * Insect & Disease Survey (see `UsdaForestHealthIngestionService`'s doc
+ * comment — real aerial-detected forest pest/disease damage within ~10
+ * miles of timber properties, a radius query rather than the exact
+ * point-intersects pattern every other spatial job here uses).
+ * Exports all thirteen ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -86,6 +92,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     ErsCountyEconomicIngestionService,
     UsdaRdEligibilityClient,
     UsdaRdEligibilityIngestionService,
+    UsdaForestHealthClient,
+    UsdaForestHealthIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -100,6 +108,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     RmaCauseOfLossIngestionService,
     ErsCountyEconomicIngestionService,
     UsdaRdEligibilityIngestionService,
+    UsdaForestHealthIngestionService,
   ],
 })
 export class IngestionModule {}

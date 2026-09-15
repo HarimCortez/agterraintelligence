@@ -103,6 +103,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerUsdaRdEligibilityRun(admin);
   }
 
+  @Post("usda-forest-health/run")
+  @RequirePermission("ingestion.run")
+  triggerUsdaForestHealthRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerUsdaForestHealthRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

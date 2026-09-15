@@ -125,6 +125,12 @@ export async function triggerUsdaRdEligibilityRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerUsdaForestHealthRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/usda-forest-health/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the USDA Forest Health sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

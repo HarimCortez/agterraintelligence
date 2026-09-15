@@ -19,6 +19,7 @@ import {
   triggerRmaCauseOfLossRun,
   triggerErsCountyEconomicRun,
   triggerUsdaRdEligibilityRun,
+  triggerUsdaForestHealthRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -30,7 +31,7 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the twelve real ingestion jobs that exist: FEMA
+ * admin manually trigger, the thirteen real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
@@ -44,18 +45,22 @@ const PAGE_SIZE = 20;
  * (see `rma-cause-of-loss-ingestion.service.ts`'s doc comment), and the
  * USDA ERS County-level Data Sets (population growth, unemployment,
  * income — see `ers-county-economic-ingestion.service.ts`'s doc
- * comment), and the USDA Rural Development Eligibility MapServer (real-
+ * comment), the USDA Rural Development Eligibility MapServer (real-
  * estate financing context — see
- * `usda-rd-eligibility-ingestion.service.ts`'s doc comment). See
+ * `usda-rd-eligibility-ingestion.service.ts`'s doc comment), and the USDA
+ * Forest Service Insect & Disease Survey (real aerial-detected forest
+ * pest/disease damage near timber properties — see
+ * `usda-forest-health-ingestion.service.ts`'s doc comment). See
  * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
  * `citrus-black-spot-ingestion.service.ts`, `cropland-cover-ingestion.service.ts`,
  * `nass-ag-census-ingestion.service.ts`, `fia-timber-ingestion.service.ts`,
  * `rma-cause-of-loss-ingestion.service.ts`,
- * `ers-county-economic-ingestion.service.ts`, and
- * `usda-rd-eligibility-ingestion.service.ts`'s doc comments for why all
- * twelve are manually triggered rather than scheduled.
+ * `ers-county-economic-ingestion.service.ts`,
+ * `usda-rd-eligibility-ingestion.service.ts`, and
+ * `usda-forest-health-ingestion.service.ts`'s doc comments for why all
+ * thirteen are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -200,6 +205,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerForestHealthMutation = useMutation({
+    mutationFn: () => triggerUsdaForestHealthRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -320,6 +334,14 @@ export function IngestionWorkspace() {
           >
             {triggerRdEligibilityMutation.isPending || runInProgress ? "Running…" : "Run USDA RD Eligibility Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerForestHealthMutation.isPending || runInProgress}
+            onClick={() => triggerForestHealthMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerForestHealthMutation.isPending || runInProgress ? "Running…" : "Run USDA Forest Health Sync"}
+          </button>
         </div>
       </header>
 
@@ -336,6 +358,7 @@ export function IngestionWorkspace() {
         triggerCropLossMutation,
         triggerCountyEconomicMutation,
         triggerRdEligibilityMutation,
+        triggerForestHealthMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -356,7 +379,8 @@ export function IngestionWorkspace() {
         triggerTimberMutation.isSuccess ||
         triggerCropLossMutation.isSuccess ||
         triggerCountyEconomicMutation.isSuccess ||
-        triggerRdEligibilityMutation.isSuccess) && (
+        triggerRdEligibilityMutation.isSuccess ||
+        triggerForestHealthMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

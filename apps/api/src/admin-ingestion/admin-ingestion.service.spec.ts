@@ -25,6 +25,7 @@ import { FiaTimberIngestionService } from "../ingestion/fia-timber-ingestion.ser
 import { RmaCauseOfLossIngestionService } from "../ingestion/rma-cause-of-loss-ingestion.service";
 import { ErsCountyEconomicIngestionService } from "../ingestion/ers-county-economic-ingestion.service";
 import { UsdaRdEligibilityIngestionService } from "../ingestion/usda-rd-eligibility-ingestion.service";
+import { UsdaForestHealthIngestionService } from "../ingestion/usda-forest-health-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -54,6 +55,7 @@ describe("AdminIngestionService", () => {
   const rmaCauseOfLossIngestionMock = { trigger: jest.fn() };
   const ersCountyEconomicIngestionMock = { trigger: jest.fn() };
   const usdaRdEligibilityIngestionMock = { trigger: jest.fn() };
+  const usdaForestHealthIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -74,6 +76,7 @@ describe("AdminIngestionService", () => {
         { provide: RmaCauseOfLossIngestionService, useValue: rmaCauseOfLossIngestionMock },
         { provide: ErsCountyEconomicIngestionService, useValue: ersCountyEconomicIngestionMock },
         { provide: UsdaRdEligibilityIngestionService, useValue: usdaRdEligibilityIngestionMock },
+        { provide: UsdaForestHealthIngestionService, useValue: usdaForestHealthIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -497,6 +500,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-12",
           metadata: { source: "usda_rd_eligibility" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerUsdaForestHealthRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      usdaForestHealthIngestionMock.trigger.mockResolvedValue({ id: "run-13" });
+
+      const result = await service.triggerUsdaForestHealthRun(ADMIN);
+
+      expect(usdaForestHealthIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-13",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_forest_health source", async () => {
+      usdaForestHealthIngestionMock.trigger.mockResolvedValue({ id: "run-13" });
+
+      await service.triggerUsdaForestHealthRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-13",
+          metadata: { source: "usda_forest_health" },
         }),
       );
     });
