@@ -155,6 +155,18 @@ export async function triggerSuddenOakDeathQuarantineRun(): Promise<IngestionRun
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerEmeraldAshBorerRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/emerald-ash-borer/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the Emerald Ash Borer sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
+export async function triggerHpaiDairyCattleRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/hpai-dairy-cattle/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the HPAI Dairy Cattle sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

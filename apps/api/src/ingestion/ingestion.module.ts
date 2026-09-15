@@ -7,6 +7,8 @@ import { CitrusQuarantineClient } from "./citrus-quarantine-client";
 import { CitrusQuarantineIngestionService } from "./citrus-quarantine-ingestion.service";
 import { CroplandCoverIngestionService } from "./cropland-cover-ingestion.service";
 import { CroplandDataClient } from "./cropland-data-client";
+import { EmeraldAshBorerClient } from "./emerald-ash-borer-client";
+import { EmeraldAshBorerIngestionService } from "./emerald-ash-borer-ingestion.service";
 import { ErsCountyEconomicClient } from "./ers-county-economic-client";
 import { ErsCountyEconomicIngestionService } from "./ers-county-economic-ingestion.service";
 import { FemaFloodZoneClient } from "./fema-flood-zone-client";
@@ -17,6 +19,8 @@ import { FireAntQuarantineClient } from "./fire-ant-quarantine-client";
 import { FireAntQuarantineIngestionService } from "./fire-ant-quarantine-ingestion.service";
 import { FlParcelClient } from "./fl-parcel-client";
 import { FlParcelCadastralIngestionService } from "./fl-parcel-cadastral-ingestion.service";
+import { HpaiDairyCattleClient } from "./hpai-dairy-cattle-client";
+import { HpaiDairyCattleIngestionService } from "./hpai-dairy-cattle-ingestion.service";
 import { NassAgCensusClient } from "./nass-ag-census-client";
 import { NassAgCensusIngestionService } from "./nass-ag-census-ingestion.service";
 import { RmaCauseOfLossClient } from "./rma-cause-of-loss-client";
@@ -35,7 +39,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Seventeen sources: FEMA flood zones
+ * Real external-data ingestion module. Nineteen sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -84,8 +88,18 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * APHIS Phytophthora ramorum (Sudden Oak Death) quarantine (see
  * `SuddenOakDeathQuarantineIngestionService`'s doc comment — real West
  * Coast forest pathogen coverage, 17 county-level records, scoped to
- * timber properties).
- * Exports all seventeen ingestion services so `AdminIngestionModule` can
+ * timber properties), the USDA APHIS Emerald Ash Borer known-infested
+ * counties dataset (see `EmeraldAshBorerIngestionService`'s doc comment —
+ * a different APHIS FeatureServer than every quarantine job above,
+ * discovered via APHIS's public ArcGIS service catalog; a historical
+ * "known infested" record rather than an active regulatory status, since
+ * the federal EAB quarantine program was rescinded in 2021), and the
+ * USDA APHIS Highly Pathogenic Avian Influenza (H5N1) in dairy cattle
+ * dataset (see `HpaiDairyCattleIngestionService`'s doc comment — the
+ * first state-level, not county-level, source in this module, and the
+ * first covering livestock disease rather than a plant/forest pest,
+ * scoped to `pasture` properties).
+ * Exports all nineteen ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -127,6 +141,10 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     AsianLonghornedBeetleQuarantineIngestionService,
     SuddenOakDeathQuarantineClient,
     SuddenOakDeathQuarantineIngestionService,
+    EmeraldAshBorerClient,
+    EmeraldAshBorerIngestionService,
+    HpaiDairyCattleClient,
+    HpaiDairyCattleIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -146,6 +164,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     SpongyMothQuarantineIngestionService,
     AsianLonghornedBeetleQuarantineIngestionService,
     SuddenOakDeathQuarantineIngestionService,
+    EmeraldAshBorerIngestionService,
+    HpaiDairyCattleIngestionService,
   ],
 })
 export class IngestionModule {}

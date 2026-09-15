@@ -24,6 +24,8 @@ import {
   triggerSpongyMothQuarantineRun,
   triggerAsianLonghornedBeetleQuarantineRun,
   triggerSuddenOakDeathQuarantineRun,
+  triggerEmeraldAshBorerRun,
+  triggerHpaiDairyCattleRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -35,7 +37,7 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the seventeen real ingestion jobs that exist: FEMA
+ * admin manually trigger, the nineteen real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
@@ -78,9 +80,15 @@ const PAGE_SIZE = 20;
  * `usda-forest-health-ingestion.service.ts`,
  * `fire-ant-quarantine-ingestion.service.ts`,
  * `spongy-moth-quarantine-ingestion.service.ts`,
- * `asian-longhorned-beetle-quarantine-ingestion.service.ts`, and
- * `sudden-oak-death-quarantine-ingestion.service.ts`'s doc comments for why
- * all seventeen are manually triggered rather than scheduled.
+ * `asian-longhorned-beetle-quarantine-ingestion.service.ts`,
+ * `sudden-oak-death-quarantine-ingestion.service.ts`,
+ * `emerald-ash-borer-ingestion.service.ts` (a different APHIS FeatureServer
+ * discovered via APHIS's public ArcGIS service catalog — a historical
+ * "known infested" record, not an active quarantine status), and
+ * `hpai-dairy-cattle-ingestion.service.ts` (the first state-level, not
+ * county-level, source in this list, and the first covering livestock
+ * disease rather than a plant/forest pest)'s doc comments for why
+ * all nineteen are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -270,6 +278,24 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerEmeraldAshBorerMutation = useMutation({
+    mutationFn: () => triggerEmeraldAshBorerRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
+  const triggerHpaiDairyCattleMutation = useMutation({
+    mutationFn: () => triggerHpaiDairyCattleRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -432,6 +458,22 @@ export function IngestionWorkspace() {
           >
             {triggerSuddenOakDeathMutation.isPending || runInProgress ? "Running…" : "Run Sudden Oak Death Quarantine Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerEmeraldAshBorerMutation.isPending || runInProgress}
+            onClick={() => triggerEmeraldAshBorerMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerEmeraldAshBorerMutation.isPending || runInProgress ? "Running…" : "Run Emerald Ash Borer Sync"}
+          </button>
+          <button
+            type="button"
+            disabled={triggerHpaiDairyCattleMutation.isPending || runInProgress}
+            onClick={() => triggerHpaiDairyCattleMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerHpaiDairyCattleMutation.isPending || runInProgress ? "Running…" : "Run HPAI Dairy Cattle Sync"}
+          </button>
         </div>
       </header>
 
@@ -453,6 +495,8 @@ export function IngestionWorkspace() {
         triggerSpongyMothMutation,
         triggerAsianLonghornedBeetleMutation,
         triggerSuddenOakDeathMutation,
+        triggerEmeraldAshBorerMutation,
+        triggerHpaiDairyCattleMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -478,7 +522,9 @@ export function IngestionWorkspace() {
         triggerFireAntMutation.isSuccess ||
         triggerSpongyMothMutation.isSuccess ||
         triggerAsianLonghornedBeetleMutation.isSuccess ||
-        triggerSuddenOakDeathMutation.isSuccess) && (
+        triggerSuddenOakDeathMutation.isSuccess ||
+        triggerEmeraldAshBorerMutation.isSuccess ||
+        triggerHpaiDairyCattleMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

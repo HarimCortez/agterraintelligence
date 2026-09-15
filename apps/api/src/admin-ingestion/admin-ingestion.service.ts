@@ -19,6 +19,8 @@ import { FireAntQuarantineIngestionService } from "../ingestion/fire-ant-quarant
 import { SpongyMothQuarantineIngestionService } from "../ingestion/spongy-moth-quarantine-ingestion.service";
 import { AsianLonghornedBeetleQuarantineIngestionService } from "../ingestion/asian-longhorned-beetle-quarantine-ingestion.service";
 import { SuddenOakDeathQuarantineIngestionService } from "../ingestion/sudden-oak-death-quarantine-ingestion.service";
+import { EmeraldAshBorerIngestionService } from "../ingestion/emerald-ash-borer-ingestion.service";
+import { HpaiDairyCattleIngestionService } from "../ingestion/hpai-dairy-cattle-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -48,6 +50,8 @@ export class AdminIngestionService {
     private readonly spongyMothQuarantineIngestion: SpongyMothQuarantineIngestionService,
     private readonly asianLonghornedBeetleQuarantineIngestion: AsianLonghornedBeetleQuarantineIngestionService,
     private readonly suddenOakDeathQuarantineIngestion: SuddenOakDeathQuarantineIngestionService,
+    private readonly emeraldAshBorerIngestion: EmeraldAshBorerIngestionService,
+    private readonly hpaiDairyCattleIngestion: HpaiDairyCattleIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -317,6 +321,36 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_sudden_oak_death_quarantine" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerEmeraldAshBorerRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.emeraldAshBorerIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_emerald_ash_borer" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerHpaiDairyCattleRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.hpaiDairyCattleIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_hpai_dairy_cattle" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

@@ -133,6 +133,18 @@ export class AdminIngestionController {
     return this.ingestionService.triggerSuddenOakDeathQuarantineRun(admin);
   }
 
+  @Post("emerald-ash-borer/run")
+  @RequirePermission("ingestion.run")
+  triggerEmeraldAshBorerRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerEmeraldAshBorerRun(admin);
+  }
+
+  @Post("hpai-dairy-cattle/run")
+  @RequirePermission("ingestion.run")
+  triggerHpaiDairyCattleRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerHpaiDairyCattleRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {
