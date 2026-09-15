@@ -97,6 +97,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerErsCountyEconomicRun(admin);
   }
 
+  @Post("usda-rd-eligibility/run")
+  @RequirePermission("ingestion.run")
+  triggerUsdaRdEligibilityRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerUsdaRdEligibilityRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

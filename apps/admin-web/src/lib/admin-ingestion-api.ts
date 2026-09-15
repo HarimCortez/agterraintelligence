@@ -119,6 +119,12 @@ export async function triggerErsCountyEconomicRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerUsdaRdEligibilityRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/usda-rd-eligibility/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the USDA RD eligibility sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

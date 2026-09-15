@@ -17,13 +17,15 @@ import { NassAgCensusClient } from "./nass-ag-census-client";
 import { NassAgCensusIngestionService } from "./nass-ag-census-ingestion.service";
 import { RmaCauseOfLossClient } from "./rma-cause-of-loss-client";
 import { RmaCauseOfLossIngestionService } from "./rma-cause-of-loss-ingestion.service";
+import { UsdaRdEligibilityClient } from "./usda-rd-eligibility-client";
+import { UsdaRdEligibilityIngestionService } from "./usda-rd-eligibility-ingestion.service";
 import { UsdaSoilClient } from "./usda-soil-client";
 import { UsdaSoilIngestionService } from "./usda-soil-ingestion.service";
 import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Eleven sources: FEMA flood zones
+ * Real external-data ingestion module. Twelve sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -44,11 +46,15 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * the USDA Risk Management Agency's federal crop insurance Cause of
  * Loss data (see `RmaCauseOfLossIngestionService`'s doc comment — like
  * the FIA job, a real keyless bulk file with no gated API alternative),
- * and the USDA ERS (Economic Research Service) County-level Data Sets
+ * the USDA ERS (Economic Research Service) County-level Data Sets
  * (see `ErsCountyEconomicIngestionService`'s doc comment — the first
  * source that isn't physical/agricultural: county population growth and
- * local economic conditions as direct land-investment context).
- * Exports all eleven ingestion services so `AdminIngestionModule` can
+ * local economic conditions as direct land-investment context), and the
+ * USDA Rural Development Eligibility MapServer (see
+ * `UsdaRdEligibilityIngestionService`'s doc comment — real-estate
+ * financing context: which RD loan programs, if any, a property is
+ * ineligible for at its own coordinates).
+ * Exports all twelve ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -78,6 +84,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     RmaCauseOfLossIngestionService,
     ErsCountyEconomicClient,
     ErsCountyEconomicIngestionService,
+    UsdaRdEligibilityClient,
+    UsdaRdEligibilityIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -91,6 +99,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     FiaTimberIngestionService,
     RmaCauseOfLossIngestionService,
     ErsCountyEconomicIngestionService,
+    UsdaRdEligibilityIngestionService,
   ],
 })
 export class IngestionModule {}

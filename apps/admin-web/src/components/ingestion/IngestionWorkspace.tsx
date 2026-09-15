@@ -18,6 +18,7 @@ import {
   triggerFiaTimberRun,
   triggerRmaCauseOfLossRun,
   triggerErsCountyEconomicRun,
+  triggerUsdaRdEligibilityRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -29,7 +30,7 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the eleven real ingestion jobs that exist: FEMA
+ * admin manually trigger, the twelve real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
@@ -43,14 +44,18 @@ const PAGE_SIZE = 20;
  * (see `rma-cause-of-loss-ingestion.service.ts`'s doc comment), and the
  * USDA ERS County-level Data Sets (population growth, unemployment,
  * income — see `ers-county-economic-ingestion.service.ts`'s doc
- * comment). See `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
+ * comment), and the USDA Rural Development Eligibility MapServer (real-
+ * estate financing context — see
+ * `usda-rd-eligibility-ingestion.service.ts`'s doc comment). See
+ * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
  * `citrus-black-spot-ingestion.service.ts`, `cropland-cover-ingestion.service.ts`,
  * `nass-ag-census-ingestion.service.ts`, `fia-timber-ingestion.service.ts`,
- * `rma-cause-of-loss-ingestion.service.ts`, and
- * `ers-county-economic-ingestion.service.ts`'s doc comments for why all
- * eleven are manually triggered rather than scheduled.
+ * `rma-cause-of-loss-ingestion.service.ts`,
+ * `ers-county-economic-ingestion.service.ts`, and
+ * `usda-rd-eligibility-ingestion.service.ts`'s doc comments for why all
+ * twelve are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -186,6 +191,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerRdEligibilityMutation = useMutation({
+    mutationFn: () => triggerUsdaRdEligibilityRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -298,6 +312,14 @@ export function IngestionWorkspace() {
           >
             {triggerCountyEconomicMutation.isPending || runInProgress ? "Running…" : "Run ERS County Economic Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerRdEligibilityMutation.isPending || runInProgress}
+            onClick={() => triggerRdEligibilityMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerRdEligibilityMutation.isPending || runInProgress ? "Running…" : "Run USDA RD Eligibility Sync"}
+          </button>
         </div>
       </header>
 
@@ -313,6 +335,7 @@ export function IngestionWorkspace() {
         triggerTimberMutation,
         triggerCropLossMutation,
         triggerCountyEconomicMutation,
+        triggerRdEligibilityMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -332,7 +355,8 @@ export function IngestionWorkspace() {
         triggerAgCensusMutation.isSuccess ||
         triggerTimberMutation.isSuccess ||
         triggerCropLossMutation.isSuccess ||
-        triggerCountyEconomicMutation.isSuccess) && (
+        triggerCountyEconomicMutation.isSuccess ||
+        triggerRdEligibilityMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>
