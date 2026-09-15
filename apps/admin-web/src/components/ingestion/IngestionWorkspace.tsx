@@ -23,6 +23,7 @@ import {
   triggerFireAntQuarantineRun,
   triggerSpongyMothQuarantineRun,
   triggerAsianLonghornedBeetleQuarantineRun,
+  triggerSuddenOakDeathQuarantineRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -34,7 +35,7 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the sixteen real ingestion jobs that exist: FEMA
+ * admin manually trigger, the seventeen real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
@@ -60,9 +61,12 @@ const PAGE_SIZE = 20;
  * APHIS Spongy Moth quarantine (the largest real program on that same
  * quarantine layer, 620 county-level records nationwide, scoped to timber
  * properties — see `spongy-moth-quarantine-ingestion.service.ts`'s doc
- * comment), and the USDA APHIS Asian Longhorned Beetle quarantine (the
- * first of the four quarantine jobs to filter `Quarantine_Status`
+ * comment), the USDA APHIS Asian Longhorned Beetle quarantine (the
+ * first of the quarantine jobs to filter `Quarantine_Status`
  * server-side — see `asian-longhorned-beetle-quarantine-ingestion.service.ts`'s
+ * doc comment), and the USDA APHIS Phytophthora ramorum (Sudden Oak Death)
+ * quarantine (real West Coast forest pathogen coverage, scoped to timber
+ * properties — see `sudden-oak-death-quarantine-ingestion.service.ts`'s
  * doc comment). See `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
@@ -73,9 +77,10 @@ const PAGE_SIZE = 20;
  * `usda-rd-eligibility-ingestion.service.ts`,
  * `usda-forest-health-ingestion.service.ts`,
  * `fire-ant-quarantine-ingestion.service.ts`,
- * `spongy-moth-quarantine-ingestion.service.ts`, and
- * `asian-longhorned-beetle-quarantine-ingestion.service.ts`'s doc comments
- * for why all sixteen are manually triggered rather than scheduled.
+ * `spongy-moth-quarantine-ingestion.service.ts`,
+ * `asian-longhorned-beetle-quarantine-ingestion.service.ts`, and
+ * `sudden-oak-death-quarantine-ingestion.service.ts`'s doc comments for why
+ * all seventeen are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -256,6 +261,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerSuddenOakDeathMutation = useMutation({
+    mutationFn: () => triggerSuddenOakDeathQuarantineRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -410,6 +424,14 @@ export function IngestionWorkspace() {
               ? "Running…"
               : "Run Asian Longhorned Beetle Quarantine Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerSuddenOakDeathMutation.isPending || runInProgress}
+            onClick={() => triggerSuddenOakDeathMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerSuddenOakDeathMutation.isPending || runInProgress ? "Running…" : "Run Sudden Oak Death Quarantine Sync"}
+          </button>
         </div>
       </header>
 
@@ -430,6 +452,7 @@ export function IngestionWorkspace() {
         triggerFireAntMutation,
         triggerSpongyMothMutation,
         triggerAsianLonghornedBeetleMutation,
+        triggerSuddenOakDeathMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -454,7 +477,8 @@ export function IngestionWorkspace() {
         triggerForestHealthMutation.isSuccess ||
         triggerFireAntMutation.isSuccess ||
         triggerSpongyMothMutation.isSuccess ||
-        triggerAsianLonghornedBeetleMutation.isSuccess) && (
+        triggerAsianLonghornedBeetleMutation.isSuccess ||
+        triggerSuddenOakDeathMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

@@ -18,6 +18,7 @@ import { UsdaForestHealthIngestionService } from "../ingestion/usda-forest-healt
 import { FireAntQuarantineIngestionService } from "../ingestion/fire-ant-quarantine-ingestion.service";
 import { SpongyMothQuarantineIngestionService } from "../ingestion/spongy-moth-quarantine-ingestion.service";
 import { AsianLonghornedBeetleQuarantineIngestionService } from "../ingestion/asian-longhorned-beetle-quarantine-ingestion.service";
+import { SuddenOakDeathQuarantineIngestionService } from "../ingestion/sudden-oak-death-quarantine-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -46,6 +47,7 @@ export class AdminIngestionService {
     private readonly fireAntQuarantineIngestion: FireAntQuarantineIngestionService,
     private readonly spongyMothQuarantineIngestion: SpongyMothQuarantineIngestionService,
     private readonly asianLonghornedBeetleQuarantineIngestion: AsianLonghornedBeetleQuarantineIngestionService,
+    private readonly suddenOakDeathQuarantineIngestion: SuddenOakDeathQuarantineIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -300,6 +302,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_asian_longhorned_beetle_quarantine" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerSuddenOakDeathQuarantineRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.suddenOakDeathQuarantineIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_sudden_oak_death_quarantine" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

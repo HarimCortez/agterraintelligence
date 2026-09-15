@@ -23,6 +23,8 @@ import { RmaCauseOfLossClient } from "./rma-cause-of-loss-client";
 import { RmaCauseOfLossIngestionService } from "./rma-cause-of-loss-ingestion.service";
 import { SpongyMothQuarantineClient } from "./spongy-moth-quarantine-client";
 import { SpongyMothQuarantineIngestionService } from "./spongy-moth-quarantine-ingestion.service";
+import { SuddenOakDeathQuarantineClient } from "./sudden-oak-death-quarantine-client";
+import { SuddenOakDeathQuarantineIngestionService } from "./sudden-oak-death-quarantine-ingestion.service";
 import { UsdaForestHealthClient } from "./usda-forest-health-client";
 import { UsdaForestHealthIngestionService } from "./usda-forest-health-ingestion.service";
 import { UsdaRdEligibilityClient } from "./usda-rd-eligibility-client";
@@ -33,7 +35,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Sixteen sources: FEMA flood zones
+ * Real external-data ingestion module. Seventeen sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -76,10 +78,14 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * nationwide, scoped to timber properties), and the USDA APHIS Asian
  * Longhorned Beetle quarantine (see
  * `AsianLonghornedBeetleQuarantineIngestionService`'s doc comment — the
- * first of the four quarantine jobs to filter `Quarantine_Status`
+ * first of the quarantine jobs to filter `Quarantine_Status`
  * server-side, avoiding a real latent bug where a rescinded/lifted
- * quarantine could otherwise be surfaced as still active).
- * Exports all sixteen ingestion services so `AdminIngestionModule` can
+ * quarantine could otherwise be surfaced as still active), and the USDA
+ * APHIS Phytophthora ramorum (Sudden Oak Death) quarantine (see
+ * `SuddenOakDeathQuarantineIngestionService`'s doc comment — real West
+ * Coast forest pathogen coverage, 17 county-level records, scoped to
+ * timber properties).
+ * Exports all seventeen ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -119,6 +125,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     SpongyMothQuarantineIngestionService,
     AsianLonghornedBeetleQuarantineClient,
     AsianLonghornedBeetleQuarantineIngestionService,
+    SuddenOakDeathQuarantineClient,
+    SuddenOakDeathQuarantineIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -137,6 +145,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     FireAntQuarantineIngestionService,
     SpongyMothQuarantineIngestionService,
     AsianLonghornedBeetleQuarantineIngestionService,
+    SuddenOakDeathQuarantineIngestionService,
   ],
 })
 export class IngestionModule {}

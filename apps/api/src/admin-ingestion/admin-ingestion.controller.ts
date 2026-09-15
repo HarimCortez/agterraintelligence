@@ -127,6 +127,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerAsianLonghornedBeetleQuarantineRun(admin);
   }
 
+  @Post("sudden-oak-death-quarantine/run")
+  @RequirePermission("ingestion.run")
+  triggerSuddenOakDeathQuarantineRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerSuddenOakDeathQuarantineRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

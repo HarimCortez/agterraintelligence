@@ -29,6 +29,7 @@ import { UsdaForestHealthIngestionService } from "../ingestion/usda-forest-healt
 import { FireAntQuarantineIngestionService } from "../ingestion/fire-ant-quarantine-ingestion.service";
 import { SpongyMothQuarantineIngestionService } from "../ingestion/spongy-moth-quarantine-ingestion.service";
 import { AsianLonghornedBeetleQuarantineIngestionService } from "../ingestion/asian-longhorned-beetle-quarantine-ingestion.service";
+import { SuddenOakDeathQuarantineIngestionService } from "../ingestion/sudden-oak-death-quarantine-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -62,6 +63,7 @@ describe("AdminIngestionService", () => {
   const fireAntQuarantineIngestionMock = { trigger: jest.fn() };
   const spongyMothQuarantineIngestionMock = { trigger: jest.fn() };
   const asianLonghornedBeetleQuarantineIngestionMock = { trigger: jest.fn() };
+  const suddenOakDeathQuarantineIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -86,6 +88,7 @@ describe("AdminIngestionService", () => {
         { provide: FireAntQuarantineIngestionService, useValue: fireAntQuarantineIngestionMock },
         { provide: SpongyMothQuarantineIngestionService, useValue: spongyMothQuarantineIngestionMock },
         { provide: AsianLonghornedBeetleQuarantineIngestionService, useValue: asianLonghornedBeetleQuarantineIngestionMock },
+        { provide: SuddenOakDeathQuarantineIngestionService, useValue: suddenOakDeathQuarantineIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -645,6 +648,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-16",
           metadata: { source: "usda_aphis_asian_longhorned_beetle_quarantine" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerSuddenOakDeathQuarantineRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      suddenOakDeathQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-17" });
+
+      const result = await service.triggerSuddenOakDeathQuarantineRun(ADMIN);
+
+      expect(suddenOakDeathQuarantineIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-17",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_aphis_sudden_oak_death_quarantine source", async () => {
+      suddenOakDeathQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-17" });
+
+      await service.triggerSuddenOakDeathQuarantineRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-17",
+          metadata: { source: "usda_aphis_sudden_oak_death_quarantine" },
         }),
       );
     });

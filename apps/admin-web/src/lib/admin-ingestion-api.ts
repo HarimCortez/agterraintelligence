@@ -149,6 +149,12 @@ export async function triggerAsianLonghornedBeetleQuarantineRun(): Promise<Inges
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerSuddenOakDeathQuarantineRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/sudden-oak-death-quarantine/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the Sudden Oak Death quarantine sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;
