@@ -589,6 +589,8 @@ model PropertySoilData {
   capabilityClass String? @map("capability_class")
   /** Percent of the map unit classified hydric (wetland-indicator soils), 0-100 (`muaggatt.hydclprs`). */
   hydricPct Int? @map("hydric_pct")
+  /** Farmland Protection Policy Act classification, e.g. "Prime farmland", "Farmland of statewide importance", "Not prime farmland" (`mapunit.farmlndcl` — NOT `muaggatt`, confirmed live: the column lives on `mapunit` itself, not the aggregated-attributes table). Added later as a fourth `mapunit`/`muaggatt` field tracked by the same per-point query, not a new external source. */
+  farmlandClassification String? @map("farmland_classification")
 
   ingestedAt DateTime @default(now()) @map("ingested_at")
 

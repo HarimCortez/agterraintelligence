@@ -46,6 +46,7 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     soilSlopePercent: null,
     soilCapabilityClass: null,
     soilHydricPct: null,
+    soilFarmlandClassification: null,
     cropCoverYear: null,
     cropCoverCropCode: null,
     cropCoverDescription: null,

@@ -12,6 +12,7 @@ const SOIL_RESULT = {
   slopePercent: 0.5,
   capabilityClass: "7",
   hydricPct: 97,
+  farmlandClassification: "Not prime farmland",
 };
 
 describe("UsdaSoilIngestionService", () => {
@@ -70,6 +71,7 @@ describe("UsdaSoilIngestionService", () => {
           mapUnitName: "Floridana, Placid, and Okeelanta soils, frequently flooded",
           drainageClass: "Very poorly drained",
           hydricPct: 97,
+          farmlandClassification: "Not prime farmland",
         }),
       }),
     );

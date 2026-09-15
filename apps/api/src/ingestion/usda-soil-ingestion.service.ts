@@ -95,6 +95,7 @@ export class UsdaSoilIngestionService {
             slopePercent: result.slopePercent,
             capabilityClass: result.capabilityClass,
             hydricPct: result.hydricPct,
+            farmlandClassification: result.farmlandClassification,
           },
         });
         recordsCreated++;

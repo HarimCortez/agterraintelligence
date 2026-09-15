@@ -70,6 +70,7 @@ export interface RawPropertyDetailRow {
   soilSlopePercent: string | null; // Decimal, stringified
   soilCapabilityClass: string | null;
   soilHydricPct: number | null;
+  soilFarmlandClassification: string | null;
   // Crop cover (null if no PropertyCropCover row exists for this property yet)
   cropCoverYear: number | null;
   cropCoverCropCode: number | null;
@@ -219,6 +220,7 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
       slopePercent: row.soilSlopePercent !== null ? parseFloat(row.soilSlopePercent) : null,
       capabilityClass: row.soilCapabilityClass,
       hydricPct: row.soilHydricPct,
+      farmlandClassification: row.soilFarmlandClassification,
     } satisfies PropertySoilSummary;
   } else {
     result.soilData = null;

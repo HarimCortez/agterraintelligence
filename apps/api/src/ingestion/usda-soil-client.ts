@@ -14,6 +14,8 @@ export interface SoilResult {
   capabilityClass: string | null;
   /** 0-100. */
   hydricPct: number | null;
+  /** Farmland Protection Policy Act classification, e.g. "Prime farmland", "Farmland of statewide importance", "Not prime farmland". */
+  farmlandClassification: string | null;
 }
 
 interface SdaResponse {
@@ -40,8 +42,22 @@ interface SdaResponse {
  * due diligence: drainage, flood frequency, slope, capability class,
  * hydric percentage. Column names were verified against the service's own
  * `muaggatt` schema (a first pass guessed `farmlndcl`/`slopegraddcd`,
- * which don't exist — real errors from the service corrected the query,
- * not assumption).
+ * which don't exist on `muaggatt` — real errors from the service corrected
+ * the query, not assumption).
+ *
+ * `farmlandClassification` was added later as a fifth tracked attribute —
+ * not a new external source, same per-point query. The real fix for the
+ * `farmlndcl` error mentioned above: that field turns out to live directly
+ * on `mapunit` (`mu.farmlndcl`), not `muaggatt` or `component` (both tried
+ * and rejected with real "Invalid column name" errors before finding the
+ * right table) — confirmed live via a real point query returning "Not
+ * prime farmland" for a real FL coordinate. Initially deprioritized because
+ * all 20 of this project's seeded Florida properties came back uniformly
+ * "Not prime farmland" (no variance in that narrow sample), but this
+ * project is nationwide — Prime Farmland / Farmland of Statewide
+ * Importance / Not Prime Farmland is a real, meaningful Farmland
+ * Protection Policy Act classification nationwide, not something to skip
+ * just because the current FL-only seed set doesn't show it varying.
  */
 @Injectable()
 export class UsdaSoilClient {
@@ -49,7 +65,7 @@ export class UsdaSoilClient {
 
   /** Returns null if the point has no mapped soil data, or if the request/query fails. */
   async querySoilAtPoint(lat: number, lng: number): Promise<SoilResult | null> {
-    const query = `SELECT mu.mukey, mu.musym, mu.muname, ma.drclassdcd, ma.flodfreqdcd, ma.slopegraddcp, ma.niccdcd, ma.hydclprs FROM mapunit mu INNER JOIN muaggatt ma ON ma.mukey = mu.mukey WHERE mu.mukey IN (SELECT DISTINCT mukey FROM SDA_Get_Mukey_from_intersection_with_WktWgs84('point(${lng} ${lat})'))`;
+    const query = `SELECT mu.mukey, mu.musym, mu.muname, mu.farmlndcl, ma.drclassdcd, ma.flodfreqdcd, ma.slopegraddcp, ma.niccdcd, ma.hydclprs FROM mapunit mu INNER JOIN muaggatt ma ON ma.mukey = mu.mukey WHERE mu.mukey IN (SELECT DISTINCT mukey FROM SDA_Get_Mukey_from_intersection_with_WktWgs84('point(${lng} ${lat})'))`;
 
     let response: Response;
     try {
@@ -77,7 +93,7 @@ export class UsdaSoilClient {
       return null;
     }
 
-    const [mukey, musym, muname, drclassdcd, flodfreqdcd, slopegraddcp, niccdcd, hydclprs] = rows[1]!;
+    const [mukey, musym, muname, farmlndcl, drclassdcd, flodfreqdcd, slopegraddcp, niccdcd, hydclprs] = rows[1]!;
 
     return {
       mapUnitKey: mukey!,
@@ -88,6 +104,7 @@ export class UsdaSoilClient {
       slopePercent: slopegraddcp ? parseFloat(slopegraddcp) : null,
       capabilityClass: niccdcd || null,
       hydricPct: hydclprs ? parseInt(hydclprs, 10) : null,
+      farmlandClassification: farmlndcl || null,
     };
   }
 }

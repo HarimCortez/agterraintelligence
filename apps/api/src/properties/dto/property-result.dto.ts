@@ -28,6 +28,7 @@ export interface PropertySoilSummary {
   slopePercent: number | null;
   capabilityClass: string | null;
   hydricPct: number | null;
+  farmlandClassification: string | null;
 }
 
 /** Real USDA NASS Cropland Data Layer satellite classification at the property's coordinates — see `PropertyCropCover` in schema.prisma. */

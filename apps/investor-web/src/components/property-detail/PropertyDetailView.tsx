@@ -183,7 +183,7 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
               {" "}
               <span className="text-xs">(map unit {property.soilData.mapUnitSymbol})</span>
             </p>
-            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-sm sm:grid-cols-5">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
                   Drainage
@@ -210,9 +210,16 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
                 </dt>
                 <dd className="text-sm text-text-primary">{property.soilData.capabilityClass ?? "—"}</dd>
               </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Farmland classification
+                </dt>
+                <dd className="text-sm text-text-primary">{property.soilData.farmlandClassification ?? "—"}</dd>
+              </div>
             </dl>
             <p className="text-xs text-text-secondary">
-              Source: USDA NRCS Soil Survey Geographic Database (SSURGO).
+              Source: USDA NRCS Soil Survey Geographic Database (SSURGO). Farmland classification reflects the
+              federal Farmland Protection Policy Act designation for this soil map unit.
             </p>
           </div>
         )}
