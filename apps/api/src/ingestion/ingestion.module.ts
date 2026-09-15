@@ -11,6 +11,8 @@ import { FemaFloodZoneClient } from "./fema-flood-zone-client";
 import { FemaFloodZoneIngestionService } from "./fema-flood-zone-ingestion.service";
 import { FiaTimberClient } from "./fia-timber-client";
 import { FiaTimberIngestionService } from "./fia-timber-ingestion.service";
+import { FireAntQuarantineClient } from "./fire-ant-quarantine-client";
+import { FireAntQuarantineIngestionService } from "./fire-ant-quarantine-ingestion.service";
 import { FlParcelClient } from "./fl-parcel-client";
 import { FlParcelCadastralIngestionService } from "./fl-parcel-cadastral-ingestion.service";
 import { NassAgCensusClient } from "./nass-ag-census-client";
@@ -27,7 +29,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Thirteen sources: FEMA flood zones
+ * Real external-data ingestion module. Fourteen sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -55,12 +57,17 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * USDA Rural Development Eligibility MapServer (see
  * `UsdaRdEligibilityIngestionService`'s doc comment — real-estate
  * financing context: which RD loan programs, if any, a property is
- * ineligible for at its own coordinates), and the USDA Forest Service
+ * ineligible for at its own coordinates), the USDA Forest Service
  * Insect & Disease Survey (see `UsdaForestHealthIngestionService`'s doc
  * comment — real aerial-detected forest pest/disease damage within ~10
  * miles of timber properties, a radius query rather than the exact
- * point-intersects pattern every other spatial job here uses).
- * Exports all thirteen ingestion services so `AdminIngestionModule` can
+ * point-intersects pattern every other spatial job here uses), and the
+ * USDA APHIS Imported Fire Ant quarantine (see
+ * `FireAntQuarantineIngestionService`'s doc comment — same underlying
+ * federal quarantine dataset as the two citrus jobs, a different real
+ * `Quarantine_Program` value, swept across every property rather than one
+ * land use).
+ * Exports all fourteen ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -94,6 +101,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     UsdaRdEligibilityIngestionService,
     UsdaForestHealthClient,
     UsdaForestHealthIngestionService,
+    FireAntQuarantineClient,
+    FireAntQuarantineIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -109,6 +118,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     ErsCountyEconomicIngestionService,
     UsdaRdEligibilityIngestionService,
     UsdaForestHealthIngestionService,
+    FireAntQuarantineIngestionService,
   ],
 })
 export class IngestionModule {}

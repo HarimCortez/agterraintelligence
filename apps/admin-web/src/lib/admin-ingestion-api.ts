@@ -131,6 +131,12 @@ export async function triggerUsdaForestHealthRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerFireAntQuarantineRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/fire-ant-quarantine/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the fire ant quarantine sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

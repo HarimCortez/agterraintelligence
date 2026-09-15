@@ -109,6 +109,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerUsdaForestHealthRun(admin);
   }
 
+  @Post("fire-ant-quarantine/run")
+  @RequirePermission("ingestion.run")
+  triggerFireAntQuarantineRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerFireAntQuarantineRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

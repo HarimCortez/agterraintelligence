@@ -20,6 +20,7 @@ import {
   triggerErsCountyEconomicRun,
   triggerUsdaRdEligibilityRun,
   triggerUsdaForestHealthRun,
+  triggerFireAntQuarantineRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -31,7 +32,7 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the thirteen real ingestion jobs that exist: FEMA
+ * admin manually trigger, the fourteen real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
@@ -50,7 +51,10 @@ const PAGE_SIZE = 20;
  * `usda-rd-eligibility-ingestion.service.ts`'s doc comment), and the USDA
  * Forest Service Insect & Disease Survey (real aerial-detected forest
  * pest/disease damage near timber properties — see
- * `usda-forest-health-ingestion.service.ts`'s doc comment). See
+ * `usda-forest-health-ingestion.service.ts`'s doc comment), and the USDA
+ * APHIS Imported Fire Ant quarantine (same underlying federal quarantine
+ * dataset as the citrus jobs, swept across every property — see
+ * `fire-ant-quarantine-ingestion.service.ts`'s doc comment). See
  * `apps/api/src/ingestion/fema-flood-zone-ingestion.service.ts`,
  * `fl-parcel-cadastral-ingestion.service.ts`, `usda-soil-ingestion.service.ts`,
  * `wetlands-ingestion.service.ts`, `citrus-quarantine-ingestion.service.ts`,
@@ -58,9 +62,10 @@ const PAGE_SIZE = 20;
  * `nass-ag-census-ingestion.service.ts`, `fia-timber-ingestion.service.ts`,
  * `rma-cause-of-loss-ingestion.service.ts`,
  * `ers-county-economic-ingestion.service.ts`,
- * `usda-rd-eligibility-ingestion.service.ts`, and
- * `usda-forest-health-ingestion.service.ts`'s doc comments for why all
- * thirteen are manually triggered rather than scheduled.
+ * `usda-rd-eligibility-ingestion.service.ts`,
+ * `usda-forest-health-ingestion.service.ts`, and
+ * `fire-ant-quarantine-ingestion.service.ts`'s doc comments for why all
+ * fourteen are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -214,6 +219,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerFireAntMutation = useMutation({
+    mutationFn: () => triggerFireAntQuarantineRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -342,6 +356,14 @@ export function IngestionWorkspace() {
           >
             {triggerForestHealthMutation.isPending || runInProgress ? "Running…" : "Run USDA Forest Health Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerFireAntMutation.isPending || runInProgress}
+            onClick={() => triggerFireAntMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerFireAntMutation.isPending || runInProgress ? "Running…" : "Run Fire Ant Quarantine Sync"}
+          </button>
         </div>
       </header>
 
@@ -359,6 +381,7 @@ export function IngestionWorkspace() {
         triggerCountyEconomicMutation,
         triggerRdEligibilityMutation,
         triggerForestHealthMutation,
+        triggerFireAntMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -380,7 +403,8 @@ export function IngestionWorkspace() {
         triggerCropLossMutation.isSuccess ||
         triggerCountyEconomicMutation.isSuccess ||
         triggerRdEligibilityMutation.isSuccess ||
-        triggerForestHealthMutation.isSuccess) && (
+        triggerForestHealthMutation.isSuccess ||
+        triggerFireAntMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

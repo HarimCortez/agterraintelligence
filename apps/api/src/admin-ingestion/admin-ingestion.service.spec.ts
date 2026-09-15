@@ -26,6 +26,7 @@ import { RmaCauseOfLossIngestionService } from "../ingestion/rma-cause-of-loss-i
 import { ErsCountyEconomicIngestionService } from "../ingestion/ers-county-economic-ingestion.service";
 import { UsdaRdEligibilityIngestionService } from "../ingestion/usda-rd-eligibility-ingestion.service";
 import { UsdaForestHealthIngestionService } from "../ingestion/usda-forest-health-ingestion.service";
+import { FireAntQuarantineIngestionService } from "../ingestion/fire-ant-quarantine-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -56,6 +57,7 @@ describe("AdminIngestionService", () => {
   const ersCountyEconomicIngestionMock = { trigger: jest.fn() };
   const usdaRdEligibilityIngestionMock = { trigger: jest.fn() };
   const usdaForestHealthIngestionMock = { trigger: jest.fn() };
+  const fireAntQuarantineIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -77,6 +79,7 @@ describe("AdminIngestionService", () => {
         { provide: ErsCountyEconomicIngestionService, useValue: ersCountyEconomicIngestionMock },
         { provide: UsdaRdEligibilityIngestionService, useValue: usdaRdEligibilityIngestionMock },
         { provide: UsdaForestHealthIngestionService, useValue: usdaForestHealthIngestionMock },
+        { provide: FireAntQuarantineIngestionService, useValue: fireAntQuarantineIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -534,6 +537,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-13",
           metadata: { source: "usda_forest_health" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerFireAntQuarantineRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      fireAntQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-14" });
+
+      const result = await service.triggerFireAntQuarantineRun(ADMIN);
+
+      expect(fireAntQuarantineIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-14",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_aphis_fire_ant_quarantine source", async () => {
+      fireAntQuarantineIngestionMock.trigger.mockResolvedValue({ id: "run-14" });
+
+      await service.triggerFireAntQuarantineRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-14",
+          metadata: { source: "usda_aphis_fire_ant_quarantine" },
         }),
       );
     });
