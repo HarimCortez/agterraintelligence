@@ -179,6 +179,12 @@ export async function triggerCitrusCankerRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerAsianCitrusPsyllidRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/asian-citrus-psyllid-quarantine/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the Asian Citrus Psyllid quarantine sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

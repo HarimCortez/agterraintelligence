@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import { AsianLonghornedBeetleQuarantineClient } from "./asian-longhorned-beetle-quarantine-client";
 import { AsianLonghornedBeetleQuarantineIngestionService } from "./asian-longhorned-beetle-quarantine-ingestion.service";
+import { AsianCitrusPsyllidClient } from "./asian-citrus-psyllid-client";
+import { AsianCitrusPsyllidIngestionService } from "./asian-citrus-psyllid-ingestion.service";
 import { AsianLonghornedTickClient } from "./asian-longhorned-tick-client";
 import { AsianLonghornedTickIngestionService } from "./asian-longhorned-tick-ingestion.service";
 import { CitrusBlackSpotClient } from "./citrus-black-spot-client";
@@ -43,7 +45,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Twenty-one sources: FEMA flood zones
+ * Real external-data ingestion module. Twenty-two sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -112,8 +114,12 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * different, broader APHIS quarantine FeatureServer than the one behind
  * the HLB and Citrus Black Spot jobs, and the rare recent source where
  * all 5 seed counties are real, currently-active quarantine counties
- * rather than a real-but-absent-in-FL outcome).
- * Exports all twenty-one ingestion services so `AdminIngestionModule` can
+ * rather than a real-but-absent-in-FL outcome), and the USDA APHIS
+ * Asian Citrus Psyllid quarantine (see
+ * `AsianCitrusPsyllidIngestionService`'s doc comment — a different
+ * sub-layer of the same service behind the Citrus Canker job, covering
+ * the actual insect vector for HLB rather than the disease itself).
+ * Exports all twenty-two ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -163,6 +169,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     AsianLonghornedTickIngestionService,
     CitrusCankerClient,
     CitrusCankerIngestionService,
+    AsianCitrusPsyllidClient,
+    AsianCitrusPsyllidIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -186,6 +194,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     HpaiDairyCattleIngestionService,
     AsianLonghornedTickIngestionService,
     CitrusCankerIngestionService,
+    AsianCitrusPsyllidIngestionService,
   ],
 })
 export class IngestionModule {}
