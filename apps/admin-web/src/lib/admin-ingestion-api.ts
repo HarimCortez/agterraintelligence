@@ -209,6 +209,12 @@ export async function triggerErsLocalFoodEconomyRun(): Promise<IngestionRunRow> 
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerFsaResaleRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/fsa-resale/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the USDA RD/FSA Resales sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;
@@ -243,4 +249,39 @@ export async function fetchAdminParcelRecords(
   const res = await adminAuthFetch(`/api/v1/admin/ingestion/parcels?${search.toString()}`);
   if (!res.ok) return handleErrorResponse(res, "Failed to load parcel records");
   return (await res.json()) as Paginated<ParcelRecordRow>;
+}
+
+export interface FsaResaleListingRow {
+  id: string;
+  state: string;
+  county: string | null;
+  city: string | null;
+  zip: string | null;
+  streetAddress: string | null;
+  listingType: string | null;
+  priceCents: number | null;
+  totalAcres: string | null;
+  ingestedAt: string;
+}
+
+export interface ListFsaResaleListingsParams {
+  limit?: number;
+  offset?: number;
+  state?: string;
+}
+
+export const adminFsaResaleListingsQueryKey = (params: ListFsaResaleListingsParams) =>
+  ["admin-ingestion", "fsa-resale-listings", params] as const;
+
+export async function fetchAdminFsaResaleListings(
+  params: ListFsaResaleListingsParams,
+): Promise<Paginated<FsaResaleListingRow>> {
+  const search = new URLSearchParams();
+  search.set("limit", String(params.limit ?? 20));
+  search.set("offset", String(params.offset ?? 0));
+  if (params.state) search.set("state", params.state);
+
+  const res = await adminAuthFetch(`/api/v1/admin/ingestion/fsa-resale-listings?${search.toString()}`);
+  if (!res.ok) return handleErrorResponse(res, "Failed to load USDA RD/FSA resale listings");
+  return (await res.json()) as Paginated<FsaResaleListingRow>;
 }

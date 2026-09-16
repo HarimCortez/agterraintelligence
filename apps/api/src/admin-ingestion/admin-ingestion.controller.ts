@@ -7,9 +7,11 @@ import { AuthenticatedAdminUser } from "../identity-access/admin/admin.types";
 import { AdminIngestionService } from "./admin-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
+import { ListFsaResaleListingsQuery } from "./dto/list-fsa-resale-listings.query";
 import {
   ListIngestionRunsResponseDto,
   ListParcelRecordsResponseDto,
+  ListFsaResaleListingsResponseDto,
   TriggerIngestionResponseDto,
 } from "./dto/admin-ingestion.dto";
 
@@ -187,9 +189,21 @@ export class AdminIngestionController {
     return this.ingestionService.triggerErsLocalFoodEconomyRun(admin);
   }
 
+  @Post("fsa-resale/run")
+  @RequirePermission("ingestion.run")
+  triggerFsaResaleRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerFsaResaleRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {
     return this.ingestionService.listParcelRecords(query);
+  }
+
+  @Get("fsa-resale-listings")
+  @RequirePermission("ingestion.read")
+  listFsaResaleListings(@Query() query: ListFsaResaleListingsQuery): Promise<ListFsaResaleListingsResponseDto> {
+    return this.ingestionService.listFsaResaleListings(query);
   }
 }

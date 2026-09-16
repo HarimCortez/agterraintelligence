@@ -39,6 +39,7 @@ import { SweetOrangeScabIngestionService } from "../ingestion/sweet-orange-scab-
 import { ErsCountyTypologyIngestionService } from "../ingestion/ers-county-typology-ingestion.service";
 import { ErsPovertyIncomeIngestionService } from "../ingestion/ers-poverty-income-ingestion.service";
 import { ErsLocalFoodEconomyIngestionService } from "../ingestion/ers-local-food-economy-ingestion.service";
+import { FsaResaleIngestionService } from "../ingestion/fsa-resale-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -55,6 +56,7 @@ describe("AdminIngestionService", () => {
   const prismaMock = {
     ingestionRun: { findMany: jest.fn(), count: jest.fn() },
     parcelRecord: { findMany: jest.fn(), count: jest.fn() },
+    fsaResaleListing: { findMany: jest.fn(), count: jest.fn() },
   };
   const femaIngestionMock = { trigger: jest.fn() };
   const flParcelIngestionMock = { trigger: jest.fn() };
@@ -82,6 +84,7 @@ describe("AdminIngestionService", () => {
   const ersCountyTypologyIngestionMock = { trigger: jest.fn() };
   const ersPovertyIncomeIngestionMock = { trigger: jest.fn() };
   const ersLocalFoodEconomyIngestionMock = { trigger: jest.fn() };
+  const fsaResaleIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -116,6 +119,7 @@ describe("AdminIngestionService", () => {
         { provide: ErsCountyTypologyIngestionService, useValue: ersCountyTypologyIngestionMock },
         { provide: ErsPovertyIncomeIngestionService, useValue: ersPovertyIncomeIngestionMock },
         { provide: ErsLocalFoodEconomyIngestionService, useValue: ersLocalFoodEconomyIngestionMock },
+        { provide: FsaResaleIngestionService, useValue: fsaResaleIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -1017,6 +1021,77 @@ describe("AdminIngestionService", () => {
           metadata: { source: "usda_ers_local_food_economy" },
         }),
       );
+    });
+  });
+
+  describe("triggerFsaResaleRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      fsaResaleIngestionMock.trigger.mockResolvedValue({ id: "run-27" });
+
+      const result = await service.triggerFsaResaleRun(ADMIN);
+
+      expect(fsaResaleIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-27",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_rd_fsa_resales source", async () => {
+      fsaResaleIngestionMock.trigger.mockResolvedValue({ id: "run-27" });
+
+      await service.triggerFsaResaleRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-27",
+          metadata: { source: "usda_rd_fsa_resales" },
+        }),
+      );
+    });
+  });
+
+  describe("listFsaResaleListings", () => {
+    it("applies default limit/offset, no state filter, and stringifies the nullable Decimal totalAcres", async () => {
+      prismaMock.fsaResaleListing.findMany.mockResolvedValue([
+        { id: "l1", totalAcres: { toString: () => "30.00" } },
+        { id: "l2", totalAcres: null },
+      ]);
+      prismaMock.fsaResaleListing.count.mockResolvedValue(2);
+
+      const result = await service.listFsaResaleListings({});
+
+      expect(prismaMock.fsaResaleListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {}, orderBy: { ingestedAt: "desc" }, take: 20, skip: 0 }),
+      );
+      expect(result).toEqual({
+        results: [
+          { id: "l1", totalAcres: "30.00" },
+          { id: "l2", totalAcres: null },
+        ],
+        total: 2,
+        limit: 20,
+        offset: 0,
+      });
+    });
+
+    it("filters by state when provided", async () => {
+      prismaMock.fsaResaleListing.findMany.mockResolvedValue([]);
+      prismaMock.fsaResaleListing.count.mockResolvedValue(0);
+
+      await service.listFsaResaleListings({ state: "FL" });
+
+      expect(prismaMock.fsaResaleListing.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { state: "FL" } }),
+      );
+      expect(prismaMock.fsaResaleListing.count).toHaveBeenCalledWith({ where: { state: "FL" } });
     });
   });
 

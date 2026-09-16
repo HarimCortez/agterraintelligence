@@ -46,3 +46,23 @@ export interface ListParcelRecordsResponseDto {
   limit: number;
   offset: number;
 }
+
+export interface FsaResaleListingRowDto {
+  id: string;
+  state: string;
+  county: string | null;
+  city: string | null;
+  zip: string | null;
+  streetAddress: string | null;
+  listingType: string | null;
+  priceCents: number | null;
+  totalAcres: string | null;
+  ingestedAt: Date;
+}
+
+export interface ListFsaResaleListingsResponseDto {
+  results: FsaResaleListingRowDto[];
+  total: number;
+  limit: number;
+  offset: number;
+}

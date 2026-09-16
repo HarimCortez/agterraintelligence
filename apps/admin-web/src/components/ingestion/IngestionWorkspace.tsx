@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   adminIngestionRunsQueryKey,
   adminParcelRecordsQueryKey,
+  adminFsaResaleListingsQueryKey,
   fetchAdminIngestionRuns,
   fetchAdminParcelRecords,
+  fetchAdminFsaResaleListings,
   triggerFemaFloodZoneRun,
   triggerFlParcelRun,
   triggerUsdaSoilRun,
@@ -33,6 +35,7 @@ import {
   triggerErsCountyTypologyRun,
   triggerErsPovertyIncomeRun,
   triggerErsLocalFoodEconomyRun,
+  triggerFsaResaleRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -44,7 +47,7 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the twenty-six real ingestion jobs that exist: FEMA
+ * admin manually trigger, the twenty-seven real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
@@ -114,14 +117,19 @@ const PAGE_SIZE = 20;
  * poverty/deep-poverty/per-capita-income figures), and
  * `ers-local-food-economy-ingestion.service.ts` (a genuinely
  * agricultural ERS FeatureServer, updating the ag census summary rather
- * than the county economic table)'s doc comments for why all
- * twenty-six are manually triggered rather than scheduled.
+ * than the county economic table), and the USDA RD/FSA Properties
+ * resale site (the first source that creates new property *listings*
+ * rather than context or a risk flag, kept in its own staging table and
+ * never auto-merged into the investor-facing property list, visible
+ * below in the &quot;USDA RD/FSA Resale Listings&quot; table)'s doc comments
+ * for why all twenty-seven are manually triggered rather than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
   const queryClient = useQueryClient();
   const [offset, setOffset] = useState(0);
   const [parcelOffset, setParcelOffset] = useState(0);
+  const [fsaResaleOffset, setFsaResaleOffset] = useState(0);
 
   const params = { limit: PAGE_SIZE, offset };
   const query = useQuery({
@@ -141,6 +149,12 @@ export function IngestionWorkspace() {
     queryFn: () => fetchAdminParcelRecords(parcelParams),
   });
 
+  const fsaResaleParams = { limit: PAGE_SIZE, offset: fsaResaleOffset };
+  const fsaResaleQuery = useQuery({
+    queryKey: adminFsaResaleListingsQueryKey(fsaResaleParams),
+    queryFn: () => fetchAdminFsaResaleListings(fsaResaleParams),
+  });
+
   useEffect(() => {
     if (query.error) handleUnauthorized(query.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,6 +164,11 @@ export function IngestionWorkspace() {
     if (parcelQuery.error) handleUnauthorized(parcelQuery.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parcelQuery.error]);
+
+  useEffect(() => {
+    if (fsaResaleQuery.error) handleUnauthorized(fsaResaleQuery.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fsaResaleQuery.error]);
 
   const triggerFemaMutation = useMutation({
     mutationFn: () => triggerFemaFloodZoneRun(),
@@ -382,6 +401,17 @@ export function IngestionWorkspace() {
     onSuccess: () => {
       setOffset(0);
       void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
+  const triggerFsaResaleMutation = useMutation({
+    mutationFn: () => triggerFsaResaleRun(),
+    onSuccess: () => {
+      setOffset(0);
+      setFsaResaleOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "fsa-resale-listings"] });
     },
     onError: handleUnauthorized,
   });
@@ -620,6 +650,14 @@ export function IngestionWorkspace() {
           >
             {triggerErsLocalFoodEconomyMutation.isPending || runInProgress ? "Running…" : "Run ERS Local Food Economy Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerFsaResaleMutation.isPending || runInProgress}
+            onClick={() => triggerFsaResaleMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerFsaResaleMutation.isPending || runInProgress ? "Running…" : "Run USDA RD/FSA Resales Sync"}
+          </button>
         </div>
       </header>
 
@@ -650,6 +688,7 @@ export function IngestionWorkspace() {
         triggerErsCountyTypologyMutation,
         triggerErsPovertyIncomeMutation,
         triggerErsLocalFoodEconomyMutation,
+        triggerFsaResaleMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -684,7 +723,8 @@ export function IngestionWorkspace() {
         triggerSweetOrangeScabMutation.isSuccess ||
         triggerErsCountyTypologyMutation.isSuccess ||
         triggerErsPovertyIncomeMutation.isSuccess ||
-        triggerErsLocalFoodEconomyMutation.isSuccess) && (
+        triggerErsLocalFoodEconomyMutation.isSuccess ||
+        triggerFsaResaleMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>
@@ -833,6 +873,95 @@ export function IngestionWorkspace() {
               type="button"
               disabled={parcelOffset + PAGE_SIZE >= parcelQuery.data!.total}
               onClick={() => setParcelOffset(parcelOffset + PAGE_SIZE)}
+              className="rounded border border-border-default px-sm py-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      <h2 className="mb-sm mt-2xl text-lg font-semibold text-text-primary">USDA RD/FSA Resale Listings</h2>
+      <p className="mb-md text-sm text-text-secondary">
+        Real government-owned REO/foreclosure farm &amp; ranch properties from{" "}
+        <span className="font-mono text-xs">resales.usda.gov</span>, nationwide — a staging list only, never
+        auto-published to investors (see the ingestion service&apos;s doc comment). Current live USDA inventory is
+        genuinely empty as of this build, so an empty table here is the real, confirmed state of this source, not a
+        broken sync.
+      </p>
+
+      <div className="overflow-x-auto rounded border border-border-subtle bg-surface">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border-subtle text-left text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+              <th className="px-md py-sm">State</th>
+              <th className="px-md py-sm">County</th>
+              <th className="px-md py-sm">Address</th>
+              <th className="px-md py-sm">Listing type</th>
+              <th className="px-md py-sm">Price</th>
+              <th className="px-md py-sm">Total acres</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fsaResaleQuery.isPending && (
+              <tr>
+                <td className="px-md py-md text-text-secondary" colSpan={6}>
+                  Loading…
+                </td>
+              </tr>
+            )}
+            {fsaResaleQuery.isSuccess && fsaResaleQuery.data.results.length === 0 && (
+              <tr>
+                <td className="px-md py-md text-text-secondary" colSpan={6}>
+                  No listings found — run the USDA RD/FSA Resales Sync above. Real current inventory is empty
+                  nationwide, so this is the expected, confirmed state, not an error.
+                </td>
+              </tr>
+            )}
+            {fsaResaleQuery.isSuccess &&
+              fsaResaleQuery.data.results.map((listing) => (
+                <tr key={listing.id} className="border-b border-border-subtle last:border-b-0 align-top">
+                  <td className="whitespace-nowrap px-md py-sm text-text-primary">{listing.state}</td>
+                  <td className="px-md py-sm text-text-secondary">{listing.county ?? "—"}</td>
+                  <td className="px-md py-sm text-text-primary">
+                    {[listing.streetAddress, listing.city, listing.zip].filter(Boolean).join(", ") || "—"}
+                  </td>
+                  <td className="px-md py-sm text-text-primary">{listing.listingType ?? "—"}</td>
+                  <td className="px-md py-sm text-text-primary">
+                    {listing.priceCents !== null
+                      ? (listing.priceCents / 100).toLocaleString("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                          maximumFractionDigits: 0,
+                        })
+                      : "—"}
+                  </td>
+                  <td className="px-md py-sm text-text-primary">{listing.totalAcres ?? "—"}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
+
+      {(fsaResaleQuery.data?.total ?? 0) > 0 && (
+        <div className="mt-sm flex items-center justify-between text-sm text-text-secondary">
+          <span>
+            {fsaResaleOffset + 1}–{Math.min(fsaResaleOffset + PAGE_SIZE, fsaResaleQuery.data!.total)} of{" "}
+            {fsaResaleQuery.data!.total}
+          </span>
+          <div className="flex gap-sm">
+            <button
+              type="button"
+              disabled={fsaResaleOffset === 0}
+              onClick={() => setFsaResaleOffset(Math.max(0, fsaResaleOffset - PAGE_SIZE))}
+              className="rounded border border-border-default px-sm py-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={fsaResaleOffset + PAGE_SIZE >= fsaResaleQuery.data!.total}
+              onClick={() => setFsaResaleOffset(fsaResaleOffset + PAGE_SIZE)}
               className="rounded border border-border-default px-sm py-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next

@@ -1335,3 +1335,64 @@ model ParcelRecord {
   @@index([dorUseCode])
   @@map("parcel_records")
 }
+
+// Real USDA RD/FSA property resales — government-owned REO/foreclosure
+// farm & ranch real estate, sourced from resales.usda.gov (see
+// `FsaResaleClient`'s doc comment for source verification). This is the
+// legitimate free/public priced ag-land listing source `ParcelRecord`'s
+// doc comment above notes didn't exist at the time that table was built.
+//
+// Deliberately a staging table, same reasoning as `ParcelRecord`: raw
+// externally-sourced listings are not auto-published into `properties`
+// (the investor-facing table) — they need human review first (address
+// verification, geocoding, duplicate/staleness checks) before appearing
+// to real investors. Admin-console-visible only, no promotion workflow
+// built yet.
+//
+// Nationwide, not Florida-only (unlike `ParcelRecord`) — FSA repossessed
+// farm/ranch properties can appear in any state, and per this project's
+// standing nationwide-scope principle, restricting the search to FL
+// would mean missing every real listing outside it.
+model FsaResaleListing {
+  id String @id @default(uuid()) @db.Uuid
+
+  source String @default("usda_rd_fsa_resales")
+
+  state  String
+  county String?
+  city   String?
+  zip    String?
+
+  streetAddress String? @map("street_address")
+
+  /** "REO Property" or "Foreclosure" — the real listing-type values confirmed live from the site's own search filter. */
+  listingType String? @map("listing_type")
+
+  priceCents Int? @map("price_cents")
+
+  totalAcres     Decimal? @db.Decimal(10, 2) @map("total_acres")
+  croplandAcres  Decimal? @db.Decimal(10, 2) @map("cropland_acres")
+  rangelandAcres Decimal? @db.Decimal(10, 2) @map("rangeland_acres")
+  irrigatedAcres Decimal? @db.Decimal(10, 2) @map("irrigated_acres")
+
+  parcels       Int?     @map("parcels")
+  mineralRights Boolean? @map("mineral_rights")
+  easements     Boolean? @map("easements")
+
+  auctionLocation String?   @map("auction_location")
+  auctionDate     DateTime? @map("auction_date") @db.Date
+
+  /** Real free-text conditions found on real listings historically (e.g. eligibility restrictions to beginning/socially disadvantaged farmers under specific civil-action settlements) — captured verbatim, not parsed into structured fields. */
+  specialConditions String? @map("special_conditions") @db.Text
+
+  detailUrl String? @map("detail_url")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  // No confirmed unique listing ID exists in the real search results (see
+  // `FsaResaleClient`'s doc comment) — natural-key dedup on the fields
+  // that would realistically distinguish one real listing from another.
+  @@unique([source, state, county, streetAddress, priceCents])
+  @@index([state])
+  @@map("fsa_resale_listings")
+}

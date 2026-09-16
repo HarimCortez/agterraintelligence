@@ -28,11 +28,14 @@ import { SweetOrangeScabIngestionService } from "../ingestion/sweet-orange-scab-
 import { ErsCountyTypologyIngestionService } from "../ingestion/ers-county-typology-ingestion.service";
 import { ErsPovertyIncomeIngestionService } from "../ingestion/ers-poverty-income-ingestion.service";
 import { ErsLocalFoodEconomyIngestionService } from "../ingestion/ers-local-food-economy-ingestion.service";
+import { FsaResaleIngestionService } from "../ingestion/fsa-resale-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
+import { ListFsaResaleListingsQuery } from "./dto/list-fsa-resale-listings.query";
 import {
   ListIngestionRunsResponseDto,
   ListParcelRecordsResponseDto,
+  ListFsaResaleListingsResponseDto,
   TriggerIngestionResponseDto,
 } from "./dto/admin-ingestion.dto";
 
@@ -66,6 +69,7 @@ export class AdminIngestionService {
     private readonly ersCountyTypologyIngestion: ErsCountyTypologyIngestionService,
     private readonly ersPovertyIncomeIngestion: ErsPovertyIncomeIngestionService,
     private readonly ersLocalFoodEconomyIngestion: ErsLocalFoodEconomyIngestionService,
+    private readonly fsaResaleIngestion: FsaResaleIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -475,6 +479,21 @@ export class AdminIngestionService {
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
   }
 
+  async triggerFsaResaleRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.fsaResaleIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_rd_fsa_resales" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
   async listParcelRecords(query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
@@ -492,6 +511,29 @@ export class AdminIngestionService {
 
     return {
       results: rows.map((row) => ({ ...row, acreage: row.acreage.toString() })),
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  async listFsaResaleListings(query: ListFsaResaleListingsQuery): Promise<ListFsaResaleListingsResponseDto> {
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
+    const where = query.state ? { state: query.state } : {};
+
+    const [rows, total] = await Promise.all([
+      this.prisma.fsaResaleListing.findMany({
+        where,
+        orderBy: { ingestedAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.fsaResaleListing.count({ where }),
+    ]);
+
+    return {
+      results: rows.map((row) => ({ ...row, totalAcres: row.totalAcres?.toString() ?? null })),
       total,
       limit,
       offset,
