@@ -21,6 +21,7 @@ import { AsianLonghornedBeetleQuarantineIngestionService } from "../ingestion/as
 import { SuddenOakDeathQuarantineIngestionService } from "../ingestion/sudden-oak-death-quarantine-ingestion.service";
 import { EmeraldAshBorerIngestionService } from "../ingestion/emerald-ash-borer-ingestion.service";
 import { HpaiDairyCattleIngestionService } from "../ingestion/hpai-dairy-cattle-ingestion.service";
+import { AsianLonghornedTickIngestionService } from "../ingestion/asian-longhorned-tick-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -52,6 +53,7 @@ export class AdminIngestionService {
     private readonly suddenOakDeathQuarantineIngestion: SuddenOakDeathQuarantineIngestionService,
     private readonly emeraldAshBorerIngestion: EmeraldAshBorerIngestionService,
     private readonly hpaiDairyCattleIngestion: HpaiDairyCattleIngestionService,
+    private readonly asianLonghornedTickIngestion: AsianLonghornedTickIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -351,6 +353,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_hpai_dairy_cattle" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerAsianLonghornedTickRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.asianLonghornedTickIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_asian_longhorned_tick" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

@@ -167,6 +167,12 @@ export async function triggerHpaiDairyCattleRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerAsianLonghornedTickRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/asian-longhorned-tick/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the Asian Longhorned Tick sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;
