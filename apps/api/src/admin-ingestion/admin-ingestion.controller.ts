@@ -151,6 +151,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerAsianLonghornedTickRun(admin);
   }
 
+  @Post("citrus-canker-quarantine/run")
+  @RequirePermission("ingestion.run")
+  triggerCitrusCankerRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerCitrusCankerRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

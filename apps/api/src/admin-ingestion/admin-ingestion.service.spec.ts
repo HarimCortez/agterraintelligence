@@ -33,6 +33,7 @@ import { SuddenOakDeathQuarantineIngestionService } from "../ingestion/sudden-oa
 import { EmeraldAshBorerIngestionService } from "../ingestion/emerald-ash-borer-ingestion.service";
 import { HpaiDairyCattleIngestionService } from "../ingestion/hpai-dairy-cattle-ingestion.service";
 import { AsianLonghornedTickIngestionService } from "../ingestion/asian-longhorned-tick-ingestion.service";
+import { CitrusCankerIngestionService } from "../ingestion/citrus-canker-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -70,6 +71,7 @@ describe("AdminIngestionService", () => {
   const emeraldAshBorerIngestionMock = { trigger: jest.fn() };
   const hpaiDairyCattleIngestionMock = { trigger: jest.fn() };
   const asianLonghornedTickIngestionMock = { trigger: jest.fn() };
+  const citrusCankerIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -98,6 +100,7 @@ describe("AdminIngestionService", () => {
         { provide: EmeraldAshBorerIngestionService, useValue: emeraldAshBorerIngestionMock },
         { provide: HpaiDairyCattleIngestionService, useValue: hpaiDairyCattleIngestionMock },
         { provide: AsianLonghornedTickIngestionService, useValue: asianLonghornedTickIngestionMock },
+        { provide: CitrusCankerIngestionService, useValue: citrusCankerIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -793,6 +796,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-20",
           metadata: { source: "usda_aphis_asian_longhorned_tick" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerCitrusCankerRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      citrusCankerIngestionMock.trigger.mockResolvedValue({ id: "run-21" });
+
+      const result = await service.triggerCitrusCankerRun(ADMIN);
+
+      expect(citrusCankerIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-21",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_aphis_citrus_canker_quarantine source", async () => {
+      citrusCankerIngestionMock.trigger.mockResolvedValue({ id: "run-21" });
+
+      await service.triggerCitrusCankerRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-21",
+          metadata: { source: "usda_aphis_citrus_canker_quarantine" },
         }),
       );
     });

@@ -5,6 +5,8 @@ import { AsianLonghornedTickClient } from "./asian-longhorned-tick-client";
 import { AsianLonghornedTickIngestionService } from "./asian-longhorned-tick-ingestion.service";
 import { CitrusBlackSpotClient } from "./citrus-black-spot-client";
 import { CitrusBlackSpotIngestionService } from "./citrus-black-spot-ingestion.service";
+import { CitrusCankerClient } from "./citrus-canker-client";
+import { CitrusCankerIngestionService } from "./citrus-canker-ingestion.service";
 import { CitrusQuarantineClient } from "./citrus-quarantine-client";
 import { CitrusQuarantineIngestionService } from "./citrus-quarantine-ingestion.service";
 import { CroplandCoverIngestionService } from "./cropland-cover-ingestion.service";
@@ -41,7 +43,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Twenty sources: FEMA flood zones
+ * Real external-data ingestion module. Twenty-one sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -105,8 +107,13 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * a real, currently expanding invasive livestock pest, the second
  * `pasture`-scoped source, with a real established/reported severity
  * distinction surfaced directly from the source data rather than
- * collapsed to a single flag).
- * Exports all twenty ingestion services so `AdminIngestionModule` can
+ * collapsed to a single flag), and the USDA APHIS Citrus Canker federal
+ * quarantine (see `CitrusCankerIngestionService`'s doc comment — a
+ * different, broader APHIS quarantine FeatureServer than the one behind
+ * the HLB and Citrus Black Spot jobs, and the rare recent source where
+ * all 5 seed counties are real, currently-active quarantine counties
+ * rather than a real-but-absent-in-FL outcome).
+ * Exports all twenty-one ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -154,6 +161,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     HpaiDairyCattleIngestionService,
     AsianLonghornedTickClient,
     AsianLonghornedTickIngestionService,
+    CitrusCankerClient,
+    CitrusCankerIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -176,6 +185,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     EmeraldAshBorerIngestionService,
     HpaiDairyCattleIngestionService,
     AsianLonghornedTickIngestionService,
+    CitrusCankerIngestionService,
   ],
 })
 export class IngestionModule {}

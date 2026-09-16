@@ -22,6 +22,7 @@ import { SuddenOakDeathQuarantineIngestionService } from "../ingestion/sudden-oa
 import { EmeraldAshBorerIngestionService } from "../ingestion/emerald-ash-borer-ingestion.service";
 import { HpaiDairyCattleIngestionService } from "../ingestion/hpai-dairy-cattle-ingestion.service";
 import { AsianLonghornedTickIngestionService } from "../ingestion/asian-longhorned-tick-ingestion.service";
+import { CitrusCankerIngestionService } from "../ingestion/citrus-canker-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -54,6 +55,7 @@ export class AdminIngestionService {
     private readonly emeraldAshBorerIngestion: EmeraldAshBorerIngestionService,
     private readonly hpaiDairyCattleIngestion: HpaiDairyCattleIngestionService,
     private readonly asianLonghornedTickIngestion: AsianLonghornedTickIngestionService,
+    private readonly citrusCankerIngestion: CitrusCankerIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -368,6 +370,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_asian_longhorned_tick" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerCitrusCankerRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.citrusCankerIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_citrus_canker_quarantine" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
