@@ -79,6 +79,12 @@ export interface PropertyCountyEconomicSummaryDto {
   countyPopulationLoss: boolean | null;
   countyLowEducation: boolean | null;
   countyLowEmployment: boolean | null;
+  /** ERS ACS 5-year poverty/income estimates — a different vintage/source from `countyMedianHouseholdIncomeCents` above, not a duplicate. `povertyIncomeYear` is the end year of ERS's real "2017-21" style window. */
+  povertyIncomeYear: number | null;
+  countyPovertyRatePct: number | null;
+  countyChildPovertyRatePct: number | null;
+  countyDeepPovertyRatePct: number | null;
+  countyPerCapitaIncomeCents: number | null;
 }
 
 export class PropertyResultDto {

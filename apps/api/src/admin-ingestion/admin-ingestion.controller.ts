@@ -175,6 +175,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerErsCountyTypologyRun(admin);
   }
 
+  @Post("ers-poverty-income/run")
+  @RequirePermission("ingestion.run")
+  triggerErsPovertyIncomeRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerErsPovertyIncomeRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

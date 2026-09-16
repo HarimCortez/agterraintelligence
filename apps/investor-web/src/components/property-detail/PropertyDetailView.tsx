@@ -412,6 +412,30 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
                     : "—"}
                 </dd>
               </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Poverty rate
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.countyEconomicSummary.countyPovertyRatePct !== null
+                    ? `${property.countyEconomicSummary.countyPovertyRatePct.toFixed(1)}%`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Per capita income
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.countyEconomicSummary.countyPerCapitaIncomeCents !== null
+                    ? (property.countyEconomicSummary.countyPerCapitaIncomeCents / 100).toLocaleString("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      })
+                    : "—"}
+                </dd>
+              </div>
             </dl>
             {(() => {
               const typologyLabels: [string, boolean | null][] = [
@@ -443,7 +467,11 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
               {property.countyEconomicSummary.incomeYear} (ERS&apos;s own source data publishes income figures a
               year behind unemployment). County typology classifications (farming-dependent, natural amenities,
               retirement destination, population loss, low education, low employment) are ERS&apos;s 2015 edition,
-              the most recent ERS has released.
+              the most recent ERS has released. Poverty rate and per capita income are 5-year ACS estimates
+              {property.countyEconomicSummary.povertyIncomeYear !== null
+                ? ` ending ${property.countyEconomicSummary.povertyIncomeYear}`
+                : ""}{" "}
+              — a different survey and vintage than median household income above, not a duplicate figure.
             </p>
           </div>
         )}

@@ -76,6 +76,11 @@ function makeRow(overrides: Partial<RawPropertyDetailRow> = {}): RawPropertyDeta
     economicCountyPopulationLoss: null,
     economicCountyLowEducation: null,
     economicCountyLowEmployment: null,
+    economicPovertyIncomeYear: null,
+    economicCountyPovertyRatePct: null,
+    economicCountyChildPovertyRatePct: null,
+    economicCountyDeepPovertyRatePct: null,
+    economicCountyPerCapitaIncomeCents: null,
     ...overrides,
   };
 }

@@ -845,6 +845,17 @@ model PropertyCountyEconomicSummary {
   countyLowEducation        Boolean? @map("county_low_education")
   countyLowEmployment       Boolean? @map("county_low_employment")
 
+  /** The vintage of `countyPovertyRatePct`/`countyChildPovertyRatePct`/`countyDeepPovertyRatePct`/`countyPerCapitaIncomeCents` — ERS's own ACS 5-year estimate window (e.g. 2017-21), stored as the end year. A different ERS source/vintage than `countyMedianHouseholdIncomeCents` above (that field is a single-year ACS estimate from a separate ERS file), so real, deliberate overlap rather than a duplicate — see `ErsPovertyIncomeIngestionService`'s doc comment. */
+  povertyIncomeYear Int? @map("poverty_income_year")
+  /** County poverty rate, all ages, as a percent — real, meaningful variance confirmed live across Florida's seed counties (14.6%-26.2%). */
+  countyPovertyRatePct Decimal? @db.Decimal(5, 2) @map("county_poverty_rate_pct")
+  /** County poverty rate for children age 0-17, as a percent — typically higher than the all-ages rate. */
+  countyChildPovertyRatePct Decimal? @db.Decimal(5, 2) @map("county_child_poverty_rate_pct")
+  /** County deep poverty rate (income below 50% of the poverty threshold, not just below it), all ages, as a percent. */
+  countyDeepPovertyRatePct Decimal? @db.Decimal(5, 2) @map("county_deep_poverty_rate_pct")
+  /** County per capita income, in cents, for `povertyIncomeYear` — distinct from `countyMedianHouseholdIncomeCents` (per-person vs. per-household). */
+  countyPerCapitaIncomeCents Int? @map("county_per_capita_income_cents")
+
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_county_economic_summary")

@@ -116,6 +116,12 @@ export interface RawPropertyDetailRow {
   economicCountyPopulationLoss: boolean | null;
   economicCountyLowEducation: boolean | null;
   economicCountyLowEmployment: boolean | null;
+  // ERS ACS 5-year poverty/income estimates — a different vintage/source from `economicCountyMedianHouseholdIncomeCents` above.
+  economicPovertyIncomeYear: number | null;
+  economicCountyPovertyRatePct: string | null; // Decimal, stringified
+  economicCountyChildPovertyRatePct: string | null; // Decimal, stringified
+  economicCountyDeepPovertyRatePct: string | null; // Decimal, stringified
+  economicCountyPerCapitaIncomeCents: number | null;
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -305,6 +311,13 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
       countyPopulationLoss: row.economicCountyPopulationLoss,
       countyLowEducation: row.economicCountyLowEducation,
       countyLowEmployment: row.economicCountyLowEmployment,
+      povertyIncomeYear: row.economicPovertyIncomeYear,
+      countyPovertyRatePct: row.economicCountyPovertyRatePct !== null ? parseFloat(row.economicCountyPovertyRatePct) : null,
+      countyChildPovertyRatePct:
+        row.economicCountyChildPovertyRatePct !== null ? parseFloat(row.economicCountyChildPovertyRatePct) : null,
+      countyDeepPovertyRatePct:
+        row.economicCountyDeepPovertyRatePct !== null ? parseFloat(row.economicCountyDeepPovertyRatePct) : null,
+      countyPerCapitaIncomeCents: row.economicCountyPerCapitaIncomeCents,
     } satisfies PropertyCountyEconomicSummaryDto;
   } else {
     result.countyEconomicSummary = null;
