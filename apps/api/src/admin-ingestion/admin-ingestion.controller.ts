@@ -163,6 +163,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerAsianCitrusPsyllidRun(admin);
   }
 
+  @Post("sweet-orange-scab-quarantine/run")
+  @RequirePermission("ingestion.run")
+  triggerSweetOrangeScabRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerSweetOrangeScabRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

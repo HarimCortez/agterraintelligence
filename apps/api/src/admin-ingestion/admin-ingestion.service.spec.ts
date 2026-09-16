@@ -35,6 +35,7 @@ import { HpaiDairyCattleIngestionService } from "../ingestion/hpai-dairy-cattle-
 import { AsianLonghornedTickIngestionService } from "../ingestion/asian-longhorned-tick-ingestion.service";
 import { CitrusCankerIngestionService } from "../ingestion/citrus-canker-ingestion.service";
 import { AsianCitrusPsyllidIngestionService } from "../ingestion/asian-citrus-psyllid-ingestion.service";
+import { SweetOrangeScabIngestionService } from "../ingestion/sweet-orange-scab-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -74,6 +75,7 @@ describe("AdminIngestionService", () => {
   const asianLonghornedTickIngestionMock = { trigger: jest.fn() };
   const citrusCankerIngestionMock = { trigger: jest.fn() };
   const asianCitrusPsyllidIngestionMock = { trigger: jest.fn() };
+  const sweetOrangeScabIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -104,6 +106,7 @@ describe("AdminIngestionService", () => {
         { provide: AsianLonghornedTickIngestionService, useValue: asianLonghornedTickIngestionMock },
         { provide: CitrusCankerIngestionService, useValue: citrusCankerIngestionMock },
         { provide: AsianCitrusPsyllidIngestionService, useValue: asianCitrusPsyllidIngestionMock },
+        { provide: SweetOrangeScabIngestionService, useValue: sweetOrangeScabIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -867,6 +870,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-22",
           metadata: { source: "usda_aphis_asian_citrus_psyllid_quarantine" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerSweetOrangeScabRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      sweetOrangeScabIngestionMock.trigger.mockResolvedValue({ id: "run-23" });
+
+      const result = await service.triggerSweetOrangeScabRun(ADMIN);
+
+      expect(sweetOrangeScabIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-23",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_aphis_sweet_orange_scab_quarantine source", async () => {
+      sweetOrangeScabIngestionMock.trigger.mockResolvedValue({ id: "run-23" });
+
+      await service.triggerSweetOrangeScabRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-23",
+          metadata: { source: "usda_aphis_sweet_orange_scab_quarantine" },
         }),
       );
     });

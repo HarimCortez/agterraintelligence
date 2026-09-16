@@ -185,6 +185,12 @@ export async function triggerAsianCitrusPsyllidRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerSweetOrangeScabRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/sweet-orange-scab-quarantine/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the Sweet Orange Scab quarantine sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

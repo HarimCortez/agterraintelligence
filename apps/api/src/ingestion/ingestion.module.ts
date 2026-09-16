@@ -35,6 +35,8 @@ import { SpongyMothQuarantineClient } from "./spongy-moth-quarantine-client";
 import { SpongyMothQuarantineIngestionService } from "./spongy-moth-quarantine-ingestion.service";
 import { SuddenOakDeathQuarantineClient } from "./sudden-oak-death-quarantine-client";
 import { SuddenOakDeathQuarantineIngestionService } from "./sudden-oak-death-quarantine-ingestion.service";
+import { SweetOrangeScabClient } from "./sweet-orange-scab-client";
+import { SweetOrangeScabIngestionService } from "./sweet-orange-scab-ingestion.service";
 import { UsdaForestHealthClient } from "./usda-forest-health-client";
 import { UsdaForestHealthIngestionService } from "./usda-forest-health-ingestion.service";
 import { UsdaRdEligibilityClient } from "./usda-rd-eligibility-client";
@@ -45,7 +47,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Twenty-two sources: FEMA flood zones
+ * Real external-data ingestion module. Twenty-three sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -118,8 +120,13 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * Asian Citrus Psyllid quarantine (see
  * `AsianCitrusPsyllidIngestionService`'s doc comment — a different
  * sub-layer of the same service behind the Citrus Canker job, covering
- * the actual insect vector for HLB rather than the disease itself).
- * Exports all twenty-two ingestion services so `AdminIngestionModule` can
+ * the actual insect vector for HLB rather than the disease itself), and
+ * the USDA APHIS Sweet Orange Scab quarantine (see
+ * `SweetOrangeScabIngestionService`'s doc comment — the third and final
+ * sub-layer of that same service, a real but comparatively minor
+ * cosmetic-blemishing disease, scored one severity tier below the other
+ * three Florida citrus quarantine flags).
+ * Exports all twenty-three ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -171,6 +178,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     CitrusCankerIngestionService,
     AsianCitrusPsyllidClient,
     AsianCitrusPsyllidIngestionService,
+    SweetOrangeScabClient,
+    SweetOrangeScabIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -195,6 +204,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     AsianLonghornedTickIngestionService,
     CitrusCankerIngestionService,
     AsianCitrusPsyllidIngestionService,
+    SweetOrangeScabIngestionService,
   ],
 })
 export class IngestionModule {}

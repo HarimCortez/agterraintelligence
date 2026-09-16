@@ -29,6 +29,7 @@ import {
   triggerAsianLonghornedTickRun,
   triggerCitrusCankerRun,
   triggerAsianCitrusPsyllidRun,
+  triggerSweetOrangeScabRun,
 } from "@/lib/admin-ingestion-api";
 import { useHandleAdminUnauthorized } from "@/lib/use-handle-admin-unauthorized";
 import { formatEnumLabel } from "@/lib/formatters";
@@ -40,7 +41,7 @@ const PAGE_SIZE = 20;
  * `/data-sources` — Data Sources & Ingestion Monitor. Unlike the other
  * admin modules, there is no scheduled/background ingestion pipeline in
  * this deployment — this screen shows the real run history of, and lets an
- * admin manually trigger, the twenty-two real ingestion jobs that exist: FEMA
+ * admin manually trigger, the twenty-three real ingestion jobs that exist: FEMA
  * flood zone data, the FL DOR parcel cadastral sweep, USDA NRCS soil data,
  * USFWS wetlands data, USDA APHIS Citrus Greening (HLB) quarantine data,
  * USDA APHIS Citrus Black Spot quarantine data, the USDA NASS Cropland
@@ -99,8 +100,11 @@ const PAGE_SIZE = 20;
  * every seed county is real, currently-quarantined), and
  * `asian-citrus-psyllid-ingestion.service.ts` (a different sub-layer of
  * that same service, covering the actual insect vector for HLB rather
- * than the disease itself)'s doc comments for why all twenty-two are
- * manually triggered rather than scheduled.
+ * than the disease itself), and `sweet-orange-scab-ingestion.service.ts`
+ * (the third and final sub-layer of that same service, scored one
+ * severity tier below the other three Florida citrus quarantine flags)'s
+ * doc comments for why all twenty-three are manually triggered rather
+ * than scheduled.
  */
 export function IngestionWorkspace() {
   const handleUnauthorized = useHandleAdminUnauthorized();
@@ -335,6 +339,15 @@ export function IngestionWorkspace() {
     onError: handleUnauthorized,
   });
 
+  const triggerSweetOrangeScabMutation = useMutation({
+    mutationFn: () => triggerSweetOrangeScabRun(),
+    onSuccess: () => {
+      setOffset(0);
+      void queryClient.invalidateQueries({ queryKey: ["admin-ingestion", "runs"] });
+    },
+    onError: handleUnauthorized,
+  });
+
   const runInProgress = query.data?.results.some((run) => run.status === "running") ?? false;
 
   if (query.isError && query.error instanceof ForbiddenError) {
@@ -537,6 +550,14 @@ export function IngestionWorkspace() {
           >
             {triggerAsianCitrusPsyllidMutation.isPending || runInProgress ? "Running…" : "Run Asian Citrus Psyllid Quarantine Sync"}
           </button>
+          <button
+            type="button"
+            disabled={triggerSweetOrangeScabMutation.isPending || runInProgress}
+            onClick={() => triggerSweetOrangeScabMutation.mutate()}
+            className="whitespace-nowrap rounded border border-border-default px-md py-sm text-sm font-semibold text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {triggerSweetOrangeScabMutation.isPending || runInProgress ? "Running…" : "Run Sweet Orange Scab Quarantine Sync"}
+          </button>
         </div>
       </header>
 
@@ -563,6 +584,7 @@ export function IngestionWorkspace() {
         triggerAsianLonghornedTickMutation,
         triggerCitrusCankerMutation,
         triggerAsianCitrusPsyllidMutation,
+        triggerSweetOrangeScabMutation,
       ].map(
         (mutation, i) =>
           mutation.isError &&
@@ -593,7 +615,8 @@ export function IngestionWorkspace() {
         triggerHpaiDairyCattleMutation.isSuccess ||
         triggerAsianLonghornedTickMutation.isSuccess ||
         triggerCitrusCankerMutation.isSuccess ||
-        triggerAsianCitrusPsyllidMutation.isSuccess) && (
+        triggerAsianCitrusPsyllidMutation.isSuccess ||
+        triggerSweetOrangeScabMutation.isSuccess) && (
         <div className="mb-md rounded border border-border-subtle bg-surface p-sm text-sm text-text-secondary">
           Run started — this table updates automatically until it finishes.
         </div>

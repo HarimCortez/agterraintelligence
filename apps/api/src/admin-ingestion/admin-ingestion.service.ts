@@ -24,6 +24,7 @@ import { HpaiDairyCattleIngestionService } from "../ingestion/hpai-dairy-cattle-
 import { AsianLonghornedTickIngestionService } from "../ingestion/asian-longhorned-tick-ingestion.service";
 import { CitrusCankerIngestionService } from "../ingestion/citrus-canker-ingestion.service";
 import { AsianCitrusPsyllidIngestionService } from "../ingestion/asian-citrus-psyllid-ingestion.service";
+import { SweetOrangeScabIngestionService } from "../ingestion/sweet-orange-scab-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -58,6 +59,7 @@ export class AdminIngestionService {
     private readonly asianLonghornedTickIngestion: AsianLonghornedTickIngestionService,
     private readonly citrusCankerIngestion: CitrusCankerIngestionService,
     private readonly asianCitrusPsyllidIngestion: AsianCitrusPsyllidIngestionService,
+    private readonly sweetOrangeScabIngestion: SweetOrangeScabIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -402,6 +404,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_aphis_asian_citrus_psyllid_quarantine" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerSweetOrangeScabRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.sweetOrangeScabIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_aphis_sweet_orange_scab_quarantine" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
