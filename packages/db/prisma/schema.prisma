@@ -676,6 +676,19 @@ model PropertyAgCensusSummary {
   /** County-wide irrigated agricultural land, in acres, across all land uses — null if NASS withheld the county total. */
   countyIrrigatedAcres Int? @map("county_irrigated_acres")
 
+  /** The vintage year of the local-food/agritourism fields below — ERS's real 2017 Census of Agriculture-derived local food economy data set, a different year from `year` above (NASS 2022 Census) because ERS has not re-released this local-food dataset since 2017. Updated by a separate later job (see `ErsLocalFoodEconomyIngestionService`'s doc comment), so null on a row this specific job hasn't reached yet even when `year` above is set. */
+  localFoodEconomyYear Int? @map("local_food_economy_year")
+  /** County-wide orchard acreage (citrus, other tree fruit/nuts) — a real, strong proxy for citrus grove concentration in the county, confirmed live to range from under 5,000 to over 75,000 acres across this project's seed counties. Null if ERS withheld the county total for disclosure reasons. */
+  countyOrchardAcres Int? @map("county_orchard_acres")
+  /** County-wide berry acreage — null if ERS withheld the county total. */
+  countyBerryAcres Int? @map("county_berry_acres")
+  /** Percent of total county farm sales made directly to consumers (farm stands, CSAs, farmers markets, agritourism) rather than through wholesale/commodity channels — a real signal of a diversified, direct-market farm economy vs. commodity agriculture. */
+  countyDirectFarmSalesPct Decimal? @db.Decimal(6, 4) @map("county_direct_farm_sales_pct")
+  /** County-wide count of real agritourism operations (2017 Census of Agriculture) — null if ERS withheld the county total. */
+  countyAgritourismOperations Int? @map("county_agritourism_operations")
+  /** County-wide agritourism receipts, in cents — null if ERS withheld the county total (a real, common outcome for a small-count category; confirmed live for 2 of this project's 5 seed counties). */
+  countyAgritourismReceiptsCents Int? @map("county_agritourism_receipts_cents")
+
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_ag_census_summary")

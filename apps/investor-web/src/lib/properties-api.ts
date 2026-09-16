@@ -113,6 +113,13 @@ export interface PropertyAgCensusSummary {
   countyCattleInventoryHead: number | null;
   countyAgLandValueCentsPerAcre: number | null;
   countyIrrigatedAcres: number | null;
+  /** Real USDA ERS 2017 Census of Agriculture-derived local food economy figures — a fixed vintage independent of `year` above. */
+  localFoodEconomyYear: number | null;
+  countyOrchardAcres: number | null;
+  countyBerryAcres: number | null;
+  countyDirectFarmSalesPct: number | null;
+  countyAgritourismOperations: number | null;
+  countyAgritourismReceiptsCents: number | null;
 }
 
 /** Real USDA Forest Service FIA figures for the property's own COUNTY (not parcel-specific). */

@@ -19,6 +19,8 @@ import { ErsCountyEconomicClient } from "./ers-county-economic-client";
 import { ErsCountyEconomicIngestionService } from "./ers-county-economic-ingestion.service";
 import { ErsCountyTypologyClient } from "./ers-county-typology-client";
 import { ErsCountyTypologyIngestionService } from "./ers-county-typology-ingestion.service";
+import { ErsLocalFoodEconomyClient } from "./ers-local-food-economy-client";
+import { ErsLocalFoodEconomyIngestionService } from "./ers-local-food-economy-ingestion.service";
 import { ErsPovertyIncomeClient } from "./ers-poverty-income-client";
 import { ErsPovertyIncomeIngestionService } from "./ers-poverty-income-ingestion.service";
 import { FemaFloodZoneClient } from "./fema-flood-zone-client";
@@ -51,7 +53,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Twenty-five sources: FEMA flood zones
+ * Real external-data ingestion module. Twenty-six sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -142,8 +144,13 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * `Rural_Atlas_Data` MapServer than the county typology job, real ACS
  * 5-year poverty/deep-poverty/per-capita-income figures with continuous,
  * meaningful variance across the seed counties, deliberately not
- * duplicating the existing median household income field).
- * Exports all twenty-five ingestion services so `AdminIngestionModule` can
+ * duplicating the existing median household income field), and the
+ * USDA ERS Local Food Economy & Agritourism data (see
+ * `ErsLocalFoodEconomyIngestionService`'s doc comment — a different,
+ * genuinely agricultural ERS FeatureServer, updating
+ * `PropertyAgCensusSummary` rather than the county economic table,
+ * with orchard acreage as a real proxy for citrus grove concentration).
+ * Exports all twenty-six ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -201,6 +208,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     ErsCountyTypologyIngestionService,
     ErsPovertyIncomeClient,
     ErsPovertyIncomeIngestionService,
+    ErsLocalFoodEconomyClient,
+    ErsLocalFoodEconomyIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -228,6 +237,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     SweetOrangeScabIngestionService,
     ErsCountyTypologyIngestionService,
     ErsPovertyIncomeIngestionService,
+    ErsLocalFoodEconomyIngestionService,
   ],
 })
 export class IngestionModule {}

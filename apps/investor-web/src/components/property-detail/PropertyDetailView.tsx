@@ -289,9 +289,47 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
                     : "—"}
                 </dd>
               </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Orchard acreage
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.agCensusSummary.countyOrchardAcres !== null
+                    ? `${property.agCensusSummary.countyOrchardAcres.toLocaleString("en-US")} ac`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Direct farm sales
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.agCensusSummary.countyDirectFarmSalesPct !== null
+                    ? `${property.agCensusSummary.countyDirectFarmSalesPct.toFixed(1)}% of sales`
+                    : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-[var(--tracking-label)] text-text-secondary">
+                  Agritourism operations
+                </dt>
+                <dd className="text-sm text-text-primary">
+                  {property.agCensusSummary.countyAgritourismOperations !== null
+                    ? property.agCensusSummary.countyAgritourismOperations.toLocaleString("en-US")
+                    : "—"}
+                </dd>
+              </div>
             </dl>
             <p className="text-xs text-text-secondary">
               Source: USDA NASS {property.agCensusSummary.year} Census of Agriculture — published every 5 years.
+              {property.agCensusSummary.localFoodEconomyYear !== null && (
+                <>
+                  {" "}
+                  Orchard/berry acreage, direct farm sales, and agritourism figures are from USDA ERS&apos;s{" "}
+                  {property.agCensusSummary.localFoodEconomyYear} local food economy data set — a different vintage
+                  than the figures above, and the most recent ERS has released.
+                </>
+              )}
             </p>
           </div>
         )}

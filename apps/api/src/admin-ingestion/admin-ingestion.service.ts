@@ -27,6 +27,7 @@ import { AsianCitrusPsyllidIngestionService } from "../ingestion/asian-citrus-ps
 import { SweetOrangeScabIngestionService } from "../ingestion/sweet-orange-scab-ingestion.service";
 import { ErsCountyTypologyIngestionService } from "../ingestion/ers-county-typology-ingestion.service";
 import { ErsPovertyIncomeIngestionService } from "../ingestion/ers-poverty-income-ingestion.service";
+import { ErsLocalFoodEconomyIngestionService } from "../ingestion/ers-local-food-economy-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import {
@@ -64,6 +65,7 @@ export class AdminIngestionService {
     private readonly sweetOrangeScabIngestion: SweetOrangeScabIngestionService,
     private readonly ersCountyTypologyIngestion: ErsCountyTypologyIngestionService,
     private readonly ersPovertyIncomeIngestion: ErsPovertyIncomeIngestionService,
+    private readonly ersLocalFoodEconomyIngestion: ErsLocalFoodEconomyIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -453,6 +455,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_ers_poverty_income" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerErsLocalFoodEconomyRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.ersLocalFoodEconomyIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_ers_local_food_economy" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

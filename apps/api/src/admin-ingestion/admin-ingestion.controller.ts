@@ -181,6 +181,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerErsPovertyIncomeRun(admin);
   }
 
+  @Post("ers-local-food-economy/run")
+  @RequirePermission("ingestion.run")
+  triggerErsLocalFoodEconomyRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerErsLocalFoodEconomyRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

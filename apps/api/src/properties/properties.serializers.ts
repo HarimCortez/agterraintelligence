@@ -82,6 +82,13 @@ export interface RawPropertyDetailRow {
   agCensusCountyCattleInventoryHead: number | null;
   agCensusCountyAgLandValueCentsPerAcre: number | null;
   agCensusCountyIrrigatedAcres: number | null;
+  // ERS 2017 local food economy figures — independent of `agCensusYear` above (a different ERS source/vintage).
+  agCensusLocalFoodEconomyYear: number | null;
+  agCensusCountyOrchardAcres: number | null;
+  agCensusCountyBerryAcres: number | null;
+  agCensusCountyDirectFarmSalesPct: string | null; // Decimal, stringified
+  agCensusCountyAgritourismOperations: number | null;
+  agCensusCountyAgritourismReceiptsCents: number | null;
   // Timber summary (null if no PropertyTimberSummary row exists for this property yet).
   // `timberYear` is the presence signal (always set when the row exists).
   timberYear: number | null;
@@ -259,6 +266,13 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
       countyCattleInventoryHead: row.agCensusCountyCattleInventoryHead,
       countyAgLandValueCentsPerAcre: row.agCensusCountyAgLandValueCentsPerAcre,
       countyIrrigatedAcres: row.agCensusCountyIrrigatedAcres,
+      localFoodEconomyYear: row.agCensusLocalFoodEconomyYear,
+      countyOrchardAcres: row.agCensusCountyOrchardAcres,
+      countyBerryAcres: row.agCensusCountyBerryAcres,
+      countyDirectFarmSalesPct:
+        row.agCensusCountyDirectFarmSalesPct !== null ? parseFloat(row.agCensusCountyDirectFarmSalesPct) : null,
+      countyAgritourismOperations: row.agCensusCountyAgritourismOperations,
+      countyAgritourismReceiptsCents: row.agCensusCountyAgritourismReceiptsCents,
     } satisfies PropertyAgCensusSummaryDto;
   } else {
     result.agCensusSummary = null;
