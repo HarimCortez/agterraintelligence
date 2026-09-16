@@ -191,6 +191,12 @@ export async function triggerSweetOrangeScabRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerErsCountyTypologyRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/ers-county-typology/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the ERS County Typology sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

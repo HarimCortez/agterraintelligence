@@ -413,12 +413,37 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
                 </dd>
               </div>
             </dl>
+            {(() => {
+              const typologyLabels: [string, boolean | null][] = [
+                ["Farming-dependent economy", property.countyEconomicSummary.countyFarmingDependent],
+                ["High natural amenities", property.countyEconomicSummary.countyHighNaturalAmenities],
+                ["Retirement destination", property.countyEconomicSummary.countyRetirementDestination],
+                ["Population loss", property.countyEconomicSummary.countyPopulationLoss],
+                ["Low education", property.countyEconomicSummary.countyLowEducation],
+                ["Low employment", property.countyEconomicSummary.countyLowEmployment],
+              ];
+              const activeLabels = typologyLabels.filter(([, value]) => value === true).map(([label]) => label);
+              return activeLabels.length > 0 ? (
+                <div className="flex flex-wrap gap-xs">
+                  {activeLabels.map((label) => (
+                    <span
+                      key={label}
+                      className="rounded-full border border-border-subtle bg-background px-sm py-xs text-xs font-medium text-text-secondary"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              ) : null;
+            })()}
             <p className="text-xs text-text-secondary">
               Source: USDA ERS (Economic Research Service). Population, net migration, and rural-urban
               classification are {property.countyEconomicSummary.populationYear}; unemployment rate is{" "}
               {property.countyEconomicSummary.unemploymentYear}; median household income is{" "}
               {property.countyEconomicSummary.incomeYear} (ERS&apos;s own source data publishes income figures a
-              year behind unemployment).
+              year behind unemployment). County typology classifications (farming-dependent, natural amenities,
+              retirement destination, population loss, low education, low employment) are ERS&apos;s 2015 edition,
+              the most recent ERS has released.
             </p>
           </div>
         )}

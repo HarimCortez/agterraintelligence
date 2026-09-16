@@ -72,6 +72,13 @@ export interface PropertyCountyEconomicSummaryDto {
   countyUnemploymentRatePct: number | null;
   incomeYear: number;
   countyMedianHouseholdIncomeCents: number | null;
+  /** ERS's 2015 County Typology Codes + Natural Amenities Scale — no vintage year, independent of the fields above. */
+  countyFarmingDependent: boolean | null;
+  countyHighNaturalAmenities: boolean | null;
+  countyRetirementDestination: boolean | null;
+  countyPopulationLoss: boolean | null;
+  countyLowEducation: boolean | null;
+  countyLowEmployment: boolean | null;
 }
 
 export class PropertyResultDto {

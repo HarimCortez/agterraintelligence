@@ -36,6 +36,7 @@ import { AsianLonghornedTickIngestionService } from "../ingestion/asian-longhorn
 import { CitrusCankerIngestionService } from "../ingestion/citrus-canker-ingestion.service";
 import { AsianCitrusPsyllidIngestionService } from "../ingestion/asian-citrus-psyllid-ingestion.service";
 import { SweetOrangeScabIngestionService } from "../ingestion/sweet-orange-scab-ingestion.service";
+import { ErsCountyTypologyIngestionService } from "../ingestion/ers-county-typology-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -76,6 +77,7 @@ describe("AdminIngestionService", () => {
   const citrusCankerIngestionMock = { trigger: jest.fn() };
   const asianCitrusPsyllidIngestionMock = { trigger: jest.fn() };
   const sweetOrangeScabIngestionMock = { trigger: jest.fn() };
+  const ersCountyTypologyIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -107,6 +109,7 @@ describe("AdminIngestionService", () => {
         { provide: CitrusCankerIngestionService, useValue: citrusCankerIngestionMock },
         { provide: AsianCitrusPsyllidIngestionService, useValue: asianCitrusPsyllidIngestionMock },
         { provide: SweetOrangeScabIngestionService, useValue: sweetOrangeScabIngestionMock },
+        { provide: ErsCountyTypologyIngestionService, useValue: ersCountyTypologyIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -904,6 +907,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-23",
           metadata: { source: "usda_aphis_sweet_orange_scab_quarantine" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerErsCountyTypologyRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      ersCountyTypologyIngestionMock.trigger.mockResolvedValue({ id: "run-24" });
+
+      const result = await service.triggerErsCountyTypologyRun(ADMIN);
+
+      expect(ersCountyTypologyIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-24",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_ers_county_typology source", async () => {
+      ersCountyTypologyIngestionMock.trigger.mockResolvedValue({ id: "run-24" });
+
+      await service.triggerErsCountyTypologyRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-24",
+          metadata: { source: "usda_ers_county_typology" },
         }),
       );
     });

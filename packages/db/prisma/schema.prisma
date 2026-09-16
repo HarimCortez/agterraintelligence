@@ -837,6 +837,14 @@ model PropertyCountyEconomicSummary {
   /** County median household income, in cents. Confirmed to safely fit `Int` (unlike `PropertyCropLossSummary`'s cents totals) — a household income figure is orders of magnitude smaller than a county-year insurance indemnity total. */
   countyMedianHouseholdIncomeCents Int? @map("county_median_household_income_cents")
 
+  /** ERS's 2015 County Typology Codes + Natural Amenities Scale — a fixed vintage (ERS has not re-released these codes since), so unlike the fields above there's no corresponding `*Year` column. All six are real, independently-sourced boolean classifications, not derived from one another (confirmed live: Florida's seed counties show real variance across them — see `ErsCountyTypologyIngestionService`'s doc comment). */
+  countyFarmingDependent    Boolean? @map("county_farming_dependent")
+  countyHighNaturalAmenities Boolean? @map("county_high_natural_amenities")
+  countyRetirementDestination Boolean? @map("county_retirement_destination")
+  countyPopulationLoss      Boolean? @map("county_population_loss")
+  countyLowEducation        Boolean? @map("county_low_education")
+  countyLowEmployment       Boolean? @map("county_low_employment")
+
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_county_economic_summary")

@@ -17,6 +17,8 @@ import { EmeraldAshBorerClient } from "./emerald-ash-borer-client";
 import { EmeraldAshBorerIngestionService } from "./emerald-ash-borer-ingestion.service";
 import { ErsCountyEconomicClient } from "./ers-county-economic-client";
 import { ErsCountyEconomicIngestionService } from "./ers-county-economic-ingestion.service";
+import { ErsCountyTypologyClient } from "./ers-county-typology-client";
+import { ErsCountyTypologyIngestionService } from "./ers-county-typology-ingestion.service";
 import { FemaFloodZoneClient } from "./fema-flood-zone-client";
 import { FemaFloodZoneIngestionService } from "./fema-flood-zone-ingestion.service";
 import { FiaTimberClient } from "./fia-timber-client";
@@ -47,7 +49,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Twenty-three sources: FEMA flood zones
+ * Real external-data ingestion module. Twenty-four sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -125,8 +127,15 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * `SweetOrangeScabIngestionService`'s doc comment — the third and final
  * sub-layer of that same service, a real but comparatively minor
  * cosmetic-blemishing disease, scored one severity tier below the other
- * three Florida citrus quarantine flags).
- * Exports all twenty-three ingestion services so `AdminIngestionModule` can
+ * three Florida citrus quarantine flags), and the USDA ERS County
+ * Typology Codes + Natural Amenities Scale (see
+ * `ErsCountyTypologyIngestionService`'s doc comment — a different ERS
+ * host than `ErsCountyEconomicIngestionService`'s plain CSV downloads,
+ * discovered via ERS's own documented geospatial API catalog; updates
+ * the same `PropertyCountyEconomicSummary` row that job creates rather
+ * than creating a new table, and is the first source in this module to
+ * update an existing row rather than create one).
+ * Exports all twenty-four ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -180,6 +189,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     AsianCitrusPsyllidIngestionService,
     SweetOrangeScabClient,
     SweetOrangeScabIngestionService,
+    ErsCountyTypologyClient,
+    ErsCountyTypologyIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -205,6 +216,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     CitrusCankerIngestionService,
     AsianCitrusPsyllidIngestionService,
     SweetOrangeScabIngestionService,
+    ErsCountyTypologyIngestionService,
   ],
 })
 export class IngestionModule {}

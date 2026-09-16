@@ -107,6 +107,15 @@ export interface RawPropertyDetailRow {
   economicCountyUnemploymentRatePct: string | null; // Decimal, stringified
   economicIncomeYear: number | null;
   economicCountyMedianHouseholdIncomeCents: number | null;
+  // ERS's 2015 County Typology Codes + Natural Amenities Scale — no vintage year (see
+  // `PropertyCountyEconomicSummary`'s schema doc comment), and independent of whether the population/
+  // unemployment/income fields above are populated (a different ingestion job writes these).
+  economicCountyFarmingDependent: boolean | null;
+  economicCountyHighNaturalAmenities: boolean | null;
+  economicCountyRetirementDestination: boolean | null;
+  economicCountyPopulationLoss: boolean | null;
+  economicCountyLowEducation: boolean | null;
+  economicCountyLowEmployment: boolean | null;
 }
 
 export function toPropertyResult(row: RawPropertyRow): PropertyResultDto {
@@ -290,6 +299,12 @@ export function toPropertyDetail(row: RawPropertyDetailRow): PropertyDetailDto {
         row.economicCountyUnemploymentRatePct !== null ? parseFloat(row.economicCountyUnemploymentRatePct) : null,
       incomeYear: row.economicIncomeYear!,
       countyMedianHouseholdIncomeCents: row.economicCountyMedianHouseholdIncomeCents,
+      countyFarmingDependent: row.economicCountyFarmingDependent,
+      countyHighNaturalAmenities: row.economicCountyHighNaturalAmenities,
+      countyRetirementDestination: row.economicCountyRetirementDestination,
+      countyPopulationLoss: row.economicCountyPopulationLoss,
+      countyLowEducation: row.economicCountyLowEducation,
+      countyLowEmployment: row.economicCountyLowEmployment,
     } satisfies PropertyCountyEconomicSummaryDto;
   } else {
     result.countyEconomicSummary = null;

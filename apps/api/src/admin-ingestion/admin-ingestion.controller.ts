@@ -169,6 +169,12 @@ export class AdminIngestionController {
     return this.ingestionService.triggerSweetOrangeScabRun(admin);
   }
 
+  @Post("ers-county-typology/run")
+  @RequirePermission("ingestion.run")
+  triggerErsCountyTypologyRun(@CurrentAdmin() admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    return this.ingestionService.triggerErsCountyTypologyRun(admin);
+  }
+
   @Get("parcels")
   @RequirePermission("ingestion.read")
   listParcelRecords(@Query() query: ListParcelRecordsQuery): Promise<ListParcelRecordsResponseDto> {

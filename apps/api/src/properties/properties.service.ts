@@ -262,7 +262,13 @@ export class PropertiesService {
         pces.unemployment_year AS "economicUnemploymentYear",
         pces.county_unemployment_rate_pct AS "economicCountyUnemploymentRatePct",
         pces.income_year AS "economicIncomeYear",
-        pces.county_median_household_income_cents AS "economicCountyMedianHouseholdIncomeCents"
+        pces.county_median_household_income_cents AS "economicCountyMedianHouseholdIncomeCents",
+        pces.county_farming_dependent AS "economicCountyFarmingDependent",
+        pces.county_high_natural_amenities AS "economicCountyHighNaturalAmenities",
+        pces.county_retirement_destination AS "economicCountyRetirementDestination",
+        pces.county_population_loss AS "economicCountyPopulationLoss",
+        pces.county_low_education AS "economicCountyLowEducation",
+        pces.county_low_employment AS "economicCountyLowEmployment"
       FROM properties p
       LEFT JOIN opportunity_scores os ON p.id = os.property_id
       LEFT JOIN property_valuations pv ON p.id = pv.property_id
@@ -291,7 +297,10 @@ export class PropertiesService {
                pces.population_year, pces.county_population, pces.county_net_migration,
                pces.county_rural_urban_continuum_code,
                pces.unemployment_year, pces.county_unemployment_rate_pct,
-               pces.income_year, pces.county_median_household_income_cents
+               pces.income_year, pces.county_median_household_income_cents,
+               pces.county_farming_dependent, pces.county_high_natural_amenities,
+               pces.county_retirement_destination, pces.county_population_loss,
+               pces.county_low_education, pces.county_low_employment
     `;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
