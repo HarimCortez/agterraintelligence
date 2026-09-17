@@ -1059,10 +1059,10 @@ describe("AdminIngestionService", () => {
   });
 
   describe("listFsaResaleListings", () => {
-    it("applies default limit/offset, no state filter, and stringifies the nullable Decimal totalAcres", async () => {
+    it("applies default limit/offset, no state filter, and stringifies the nullable Decimal totalAcres and bathrooms", async () => {
       prismaMock.fsaResaleListing.findMany.mockResolvedValue([
-        { id: "l1", totalAcres: { toString: () => "30.00" } },
-        { id: "l2", totalAcres: null },
+        { id: "l1", totalAcres: { toString: () => "30.00" }, bathrooms: { toString: () => "2.0" } },
+        { id: "l2", totalAcres: null, bathrooms: null },
       ]);
       prismaMock.fsaResaleListing.count.mockResolvedValue(2);
 
@@ -1073,8 +1073,8 @@ describe("AdminIngestionService", () => {
       );
       expect(result).toEqual({
         results: [
-          { id: "l1", totalAcres: "30.00" },
-          { id: "l2", totalAcres: null },
+          { id: "l1", totalAcres: "30.00", bathrooms: "2.0" },
+          { id: "l2", totalAcres: null, bathrooms: null },
         ],
         total: 2,
         limit: 20,

@@ -159,7 +159,9 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * auto-merged into `properties`, same reasoning as `ParcelRecord`; also
  * the first source whose results-table parser is honestly unverified
  * against real populated markup, since nationwide live inventory is
- * genuinely empty at every property type).
+ * genuinely empty at every property type — now covering all three of
+ * the site's real search types, Farm & Ranch, Single Family, and
+ * Multi-Family, tagged by `propertyType` on the shared staging table).
  * Exports all twenty-seven ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation

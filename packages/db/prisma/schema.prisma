@@ -1358,6 +1358,9 @@ model FsaResaleListing {
 
   source String @default("usda_rd_fsa_resales")
 
+  /** Which of the site's three real search types this row came from — "Farm & Ranch", "Single Family", or "Multi-Family". Defaulted for the pre-existing Farm & Ranch-only rows this column was added alongside. */
+  propertyType String @default("Farm & Ranch") @map("property_type")
+
   state  String
   county String?
   city   String?
@@ -1379,6 +1382,14 @@ model FsaResaleListing {
   mineralRights Boolean? @map("mineral_rights")
   easements     Boolean? @map("easements")
 
+  /** Single Family only — documented "Beds/Baths" and "Sq. Ft." result columns. */
+  bedrooms   Int?     @map("bedrooms")
+  bathrooms  Decimal? @db.Decimal(4, 1) @map("bathrooms")
+  squareFeet Int?     @map("square_feet")
+
+  /** Multi-Family only — documented "Total Units" result column. */
+  totalUnits Int? @map("total_units")
+
   auctionLocation String?   @map("auction_location")
   auctionDate     DateTime? @map("auction_date") @db.Date
 
@@ -1392,7 +1403,11 @@ model FsaResaleListing {
   // No confirmed unique listing ID exists in the real search results (see
   // `FsaResaleClient`'s doc comment) — natural-key dedup on the fields
   // that would realistically distinguish one real listing from another.
-  @@unique([source, state, county, streetAddress, priceCents])
+  // `propertyType` is part of the key so a Farm & Ranch, Single Family,
+  // and Multi-Family listing that happen to share an address/price never
+  // collide as duplicates of each other.
+  @@unique([source, propertyType, state, county, streetAddress, priceCents])
   @@index([state])
+  @@index([propertyType])
   @@map("fsa_resale_listings")
 }

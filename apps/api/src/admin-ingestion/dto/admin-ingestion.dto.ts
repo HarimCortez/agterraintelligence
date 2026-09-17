@@ -49,6 +49,7 @@ export interface ListParcelRecordsResponseDto {
 
 export interface FsaResaleListingRowDto {
   id: string;
+  propertyType: string;
   state: string;
   county: string | null;
   city: string | null;
@@ -57,6 +58,10 @@ export interface FsaResaleListingRowDto {
   listingType: string | null;
   priceCents: number | null;
   totalAcres: string | null;
+  bedrooms: number | null;
+  bathrooms: string | null;
+  squareFeet: number | null;
+  totalUnits: number | null;
   ingestedAt: Date;
 }
 

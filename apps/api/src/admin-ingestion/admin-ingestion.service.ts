@@ -533,7 +533,11 @@ export class AdminIngestionService {
     ]);
 
     return {
-      results: rows.map((row) => ({ ...row, totalAcres: row.totalAcres?.toString() ?? null })),
+      results: rows.map((row) => ({
+        ...row,
+        totalAcres: row.totalAcres?.toString() ?? null,
+        bathrooms: row.bathrooms?.toString() ?? null,
+      })),
       total,
       limit,
       offset,

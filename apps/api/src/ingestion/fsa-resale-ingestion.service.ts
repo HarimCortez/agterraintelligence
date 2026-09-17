@@ -14,11 +14,14 @@ export interface IngestionRunSummary {
 
 /**
  * Real ingestion job: sweeps USDA's real RD/FSA Properties resale site
- * for Farm & Ranch listings nationwide, creating an `FsaResaleListing`
- * row per real listing found — see `FsaResaleClient`'s doc comment for
- * source verification, including the real, honest caveat that its
- * results-table parser has not been verified against populated markup
- * (current live inventory is genuinely empty everywhere).
+ * for Farm & Ranch, Single Family, and Multi-Family listings nationwide
+ * (all three real, documented search types — see `FsaResaleClient`'s
+ * doc comment), creating an `FsaResaleListing` row per real listing
+ * found, tagged with its `propertyType` — see `FsaResaleClient`'s doc
+ * comment for source verification, including the real, honest caveat
+ * that its results-table parser has not been verified against populated
+ * markup for any of the three types (current live inventory is
+ * genuinely empty everywhere).
  *
  * Deliberately kept in its own staging table, never merged into
  * `properties` — same reasoning as `FlParcelCadastralIngestionService`
@@ -68,7 +71,12 @@ export class FsaResaleIngestionService {
 
   private async executeRun(ingestionRunId: string): Promise<IngestionRunSummary> {
     try {
-      const listings = await this.fsaResaleClient.searchFarmAndRanch();
+      const [farmAndRanch, singleFamily, multiFamily] = await Promise.all([
+        this.fsaResaleClient.searchFarmAndRanch(),
+        this.fsaResaleClient.searchSingleFamily(),
+        this.fsaResaleClient.searchMultiFamily(),
+      ]);
+      const listings = [...farmAndRanch, ...singleFamily, ...multiFamily];
       const itemsProcessed = listings.length;
       let recordsCreated = 0;
 
@@ -76,6 +84,7 @@ export class FsaResaleIngestionService {
         const existing = await this.prisma.fsaResaleListing.findFirst({
           where: {
             source: SOURCE,
+            propertyType: listing.propertyType,
             state: listing.state,
             county: listing.county,
             streetAddress: listing.streetAddress,
@@ -88,6 +97,7 @@ export class FsaResaleIngestionService {
         await this.prisma.fsaResaleListing.create({
           data: {
             source: SOURCE,
+            propertyType: listing.propertyType,
             state: listing.state,
             county: listing.county,
             city: listing.city,
@@ -96,6 +106,10 @@ export class FsaResaleIngestionService {
             listingType: listing.listingType,
             priceCents: listing.priceCents,
             totalAcres: listing.totalAcres !== null ? listing.totalAcres.toFixed(2) : null,
+            bedrooms: listing.bedrooms,
+            bathrooms: listing.bathrooms !== null ? listing.bathrooms.toFixed(1) : null,
+            squareFeet: listing.squareFeet,
+            totalUnits: listing.totalUnits,
           },
         });
         recordsCreated++;
