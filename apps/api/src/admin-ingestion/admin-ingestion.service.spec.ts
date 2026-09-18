@@ -40,6 +40,7 @@ import { ErsCountyTypologyIngestionService } from "../ingestion/ers-county-typol
 import { ErsPovertyIncomeIngestionService } from "../ingestion/ers-poverty-income-ingestion.service";
 import { ErsLocalFoodEconomyIngestionService } from "../ingestion/ers-local-food-economy-ingestion.service";
 import { FsaResaleIngestionService } from "../ingestion/fsa-resale-ingestion.service";
+import { CrpCountyPracticeIngestionService } from "../ingestion/crp-county-practice-ingestion.service";
 import { AdminIngestionService } from "./admin-ingestion.service";
 
 const ADMIN: AuthenticatedAdminUser = {
@@ -85,6 +86,7 @@ describe("AdminIngestionService", () => {
   const ersPovertyIncomeIngestionMock = { trigger: jest.fn() };
   const ersLocalFoodEconomyIngestionMock = { trigger: jest.fn() };
   const fsaResaleIngestionMock = { trigger: jest.fn() };
+  const crpCountyPracticeIngestionMock = { trigger: jest.fn() };
   const auditLogMock = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -120,6 +122,7 @@ describe("AdminIngestionService", () => {
         { provide: ErsPovertyIncomeIngestionService, useValue: ersPovertyIncomeIngestionMock },
         { provide: ErsLocalFoodEconomyIngestionService, useValue: ersLocalFoodEconomyIngestionMock },
         { provide: FsaResaleIngestionService, useValue: fsaResaleIngestionMock },
+        { provide: CrpCountyPracticeIngestionService, useValue: crpCountyPracticeIngestionMock },
         { provide: AuditLogService, useValue: auditLogMock },
       ],
     }).compile();
@@ -1053,6 +1056,40 @@ describe("AdminIngestionService", () => {
           targetType: "ingestion_run",
           targetId: "run-27",
           metadata: { source: "usda_rd_fsa_resales" },
+        }),
+      );
+    });
+  });
+
+  describe("triggerCrpCountyPracticeRun", () => {
+    it("starts the run in the background and returns immediately with a 'running' status", async () => {
+      crpCountyPracticeIngestionMock.trigger.mockResolvedValue({ id: "run-28" });
+
+      const result = await service.triggerCrpCountyPracticeRun(ADMIN);
+
+      expect(crpCountyPracticeIngestionMock.trigger).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        id: "run-28",
+        status: "running",
+        itemsProcessed: 0,
+        recordsCreated: 0,
+        errorMessage: null,
+      });
+    });
+
+    it("records an audit entry tagged with the usda_fsa_crp_county_practice source", async () => {
+      crpCountyPracticeIngestionMock.trigger.mockResolvedValue({ id: "run-28" });
+
+      await service.triggerCrpCountyPracticeRun(ADMIN);
+
+      expect(auditLogMock.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: "admin-1",
+          actorEmail: "admin@example.com",
+          action: "ingestion.run",
+          targetType: "ingestion_run",
+          targetId: "run-28",
+          metadata: { source: "usda_fsa_crp_county_practice" },
         }),
       );
     });

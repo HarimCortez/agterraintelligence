@@ -215,6 +215,12 @@ export async function triggerFsaResaleRun(): Promise<IngestionRunRow> {
   return (await res.json()) as IngestionRunRow;
 }
 
+export async function triggerCrpCountyPracticeRun(): Promise<IngestionRunRow> {
+  const res = await adminAuthFetch("/api/v1/admin/ingestion/crp-county-practice/run", { method: "POST" });
+  if (!res.ok) return handleErrorResponse(res, "Failed to trigger the USDA FSA CRP County Practice sync");
+  return (await res.json()) as IngestionRunRow;
+}
+
 export interface ParcelRecordRow {
   id: string;
   county: string;

@@ -13,6 +13,8 @@ import { CitrusQuarantineClient } from "./citrus-quarantine-client";
 import { CitrusQuarantineIngestionService } from "./citrus-quarantine-ingestion.service";
 import { CroplandCoverIngestionService } from "./cropland-cover-ingestion.service";
 import { CroplandDataClient } from "./cropland-data-client";
+import { CrpCountyPracticeClient } from "./crp-county-practice-client";
+import { CrpCountyPracticeIngestionService } from "./crp-county-practice-ingestion.service";
 import { EmeraldAshBorerClient } from "./emerald-ash-borer-client";
 import { EmeraldAshBorerIngestionService } from "./emerald-ash-borer-ingestion.service";
 import { ErsCountyEconomicClient } from "./ers-county-economic-client";
@@ -55,7 +57,7 @@ import { WetlandsClient } from "./wetlands-client";
 import { WetlandsIngestionService } from "./wetlands-ingestion.service";
 
 /**
- * Real external-data ingestion module. Twenty-seven sources: FEMA flood zones
+ * Real external-data ingestion module. Twenty-eight sources: FEMA flood zones
  * (see `FemaFloodZoneIngestionService`'s doc comment), the FL DOR parcel
  * cadastral sweep (see `FlParcelCadastralIngestionService`'s doc comment),
  * USDA NRCS soil data (see `UsdaSoilIngestionService`'s doc comment),
@@ -161,8 +163,17 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
  * against real populated markup, since nationwide live inventory is
  * genuinely empty at every property type — now covering all three of
  * the site's real search types, Farm & Ranch, Single Family, and
- * Multi-Family, tagged by `propertyType` on the shared staging table).
- * Exports all twenty-seven ingestion services so `AdminIngestionModule` can
+ * Multi-Family, tagged by `propertyType` on the shared staging table), and
+ * the USDA FSA Conservation Reserve Program (CRP) county-level practice
+ * report (see `CrpCountyPracticeIngestionService`'s doc comment — the
+ * twenty-eighth source, a real bulk Excel workbook previously unreachable
+ * from this environment and now confirmed live, and the first genuinely
+ * Excel-only source in this module; creates one-to-many
+ * `PropertyCrpEnrollment` rows per property, the same shape
+ * `PropertyRiskFlag`/`PropertyCropCover` use, rather than a wide one-to-one
+ * summary row, since the real source file has 41 distinct practice
+ * columns).
+ * Exports all twenty-eight ingestion services so `AdminIngestionModule` can
  * trigger runs without this module owning any admin-facing HTTP surface
  * itself — same separation
  * `MonetizationModule`/`AdminReportFulfillmentModule` use for
@@ -224,6 +235,8 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     ErsLocalFoodEconomyIngestionService,
     FsaResaleClient,
     FsaResaleIngestionService,
+    CrpCountyPracticeClient,
+    CrpCountyPracticeIngestionService,
   ],
   exports: [
     FemaFloodZoneIngestionService,
@@ -253,6 +266,7 @@ import { WetlandsIngestionService } from "./wetlands-ingestion.service";
     ErsPovertyIncomeIngestionService,
     ErsLocalFoodEconomyIngestionService,
     FsaResaleIngestionService,
+    CrpCountyPracticeIngestionService,
   ],
 })
 export class IngestionModule {}

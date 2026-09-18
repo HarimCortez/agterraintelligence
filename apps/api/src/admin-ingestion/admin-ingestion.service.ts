@@ -29,6 +29,7 @@ import { ErsCountyTypologyIngestionService } from "../ingestion/ers-county-typol
 import { ErsPovertyIncomeIngestionService } from "../ingestion/ers-poverty-income-ingestion.service";
 import { ErsLocalFoodEconomyIngestionService } from "../ingestion/ers-local-food-economy-ingestion.service";
 import { FsaResaleIngestionService } from "../ingestion/fsa-resale-ingestion.service";
+import { CrpCountyPracticeIngestionService } from "../ingestion/crp-county-practice-ingestion.service";
 import { ListIngestionRunsQuery } from "./dto/list-ingestion-runs.query";
 import { ListParcelRecordsQuery } from "./dto/list-parcel-records.query";
 import { ListFsaResaleListingsQuery } from "./dto/list-fsa-resale-listings.query";
@@ -70,6 +71,7 @@ export class AdminIngestionService {
     private readonly ersPovertyIncomeIngestion: ErsPovertyIncomeIngestionService,
     private readonly ersLocalFoodEconomyIngestion: ErsLocalFoodEconomyIngestionService,
     private readonly fsaResaleIngestion: FsaResaleIngestionService,
+    private readonly crpCountyPracticeIngestion: CrpCountyPracticeIngestionService,
     private readonly auditLog: AuditLogService,
   ) {}
 
@@ -489,6 +491,21 @@ export class AdminIngestionService {
       targetType: "ingestion_run",
       targetId: id,
       metadata: { source: "usda_rd_fsa_resales" },
+    });
+
+    return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };
+  }
+
+  async triggerCrpCountyPracticeRun(admin: AuthenticatedAdminUser): Promise<TriggerIngestionResponseDto> {
+    const { id } = await this.crpCountyPracticeIngestion.trigger();
+
+    await this.auditLog.record({
+      actorId: admin.id,
+      actorEmail: admin.email,
+      action: "ingestion.run",
+      targetType: "ingestion_run",
+      targetId: id,
+      metadata: { source: "usda_fsa_crp_county_practice" },
     });
 
     return { id, status: "running", itemsProcessed: 0, recordsCreated: 0, errorMessage: null };

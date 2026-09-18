@@ -483,6 +483,7 @@ model Property {
   timberSummary    PropertyTimberSummary?
   cropLossSummary  PropertyCropLossSummary?
   countyEconomicSummary PropertyCountyEconomicSummary?
+  crpEnrollments   PropertyCrpEnrollment[]
   aiInteractions   AiInteraction[]
   watchlistItems   WatchlistItem[]
   reportOrders     ReportOrder[]
@@ -872,6 +873,55 @@ model PropertyCountyEconomicSummary {
   ingestedAt DateTime @default(now()) @map("ingested_at")
 
   @@map("property_county_economic_summary")
+}
+
+// One-to-many with `properties` — one row per property per real USDA FSA
+// Conservation Reserve Program (CRP) conservation-practice column that
+// reported non-blank cumulative acreage for that property's county. See
+// `apps/api/src/ingestion/crp-county-practice-client.ts`'s doc comment for
+// how this source was verified live (previously unreachable from this
+// environment) and for the real column-header quirks it documents.
+//
+// The same one-to-many "enrichment row per real detail" shape as
+// `PropertyRiskFlag`/`PropertyCropCover`, not a wide one-to-one summary
+// like `PropertyCountyEconomicSummary` — the real source file has 41
+// distinct practice columns and most counties only report a real value for
+// a handful of them, so normalizing into rows avoids a mostly-null wide
+// table.
+//
+// A real, honest data-sparsity finding from verifying this source live:
+// Florida's real CRP acreage is concentrated in Panhandle counties (Holmes,
+// Jackson, Walton, Santa Rosa, etc.), none of which are among this
+// project's current seed counties (Polk, Highlands, Okeechobee, DeSoto,
+// Hardee) — a real run against today's seed data creates zero rows. Kept
+// in scope because the join logic is real and correct for any Florida
+// property in a covered county, present or future.
+model PropertyCrpEnrollment {
+  id String @id @default(uuid()) @db.Uuid
+
+  propertyId String   @map("property_id") @db.Uuid
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  /** Verbatim from the source workbook's own title row, e.g. "CUMULATIVE, AS OF JANUARY 2017" — a periodically-republished cumulative snapshot, not a live time series; see model doc comment for why this label (not the file's HTTP `Last-Modified` header) is the only honest vintage indicator. */
+  reportPeriod String @map("report_period")
+
+  /** Full, disambiguated column label from the source file (category + sub-label, footnote markers stripped), e.g. "TREE PLANTINGS - LONGLEAF PINE (CP3A)" — the real unique identifier for a column, since `practiceCode` alone collides for a few real columns (see client doc comment). */
+  practiceLabel String @db.Text @map("practice_label")
+
+  /** Parenthetical CRP practice code parsed from the column header, e.g. "CP1" — informational only, not guaranteed unique across columns (see `practiceLabel`). "TOTAL" for the source file's own all-practices total column. */
+  practiceCode String? @map("practice_code")
+
+  /** Cumulative acres enrolled under this practice in this county, as of `reportPeriod`. */
+  acres Decimal @db.Decimal(10, 2)
+
+  /** True only for the source file's own "TOTAL (ALL PRACTICES)" column row — its acres value is the sum of this property's other rows, so callers summing `acres` across a property's rows must exclude `isTotal = true` rows to avoid double-counting. False for every real individual-practice row. */
+  isTotal Boolean @default(false) @map("is_total")
+
+  ingestedAt DateTime @default(now()) @map("ingested_at")
+
+  @@unique([propertyId, reportPeriod, practiceLabel])
+  @@index([propertyId])
+  @@map("property_crp_enrollment")
 }
 
 // ---------------------------------------------------------------------------
