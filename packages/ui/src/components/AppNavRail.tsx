@@ -8,6 +8,14 @@ export interface AppNavItem {
 export interface AppNavRailProps {
   items: AppNavItem[];
   children?: ReactNode;
+  /**
+   * Optional href for the "AgTerra Intelligence" wordmark. Plain `<a>`
+   * (not `next/link`) since this package has no framework dependency —
+   * a full navigation is an acceptable tradeoff for a logo click. Omit to
+   * render the wordmark as inert text (e.g. on a screen with no real home
+   * route yet, as admin-web's shell currently does).
+   */
+  logoHref?: string;
 }
 
 /**
@@ -18,10 +26,22 @@ export interface AppNavRailProps {
  * scope to define navigation IA for, not something to invent in `fe`) —
  * callers pass whatever items are real.
  */
-export function AppNavRail({ items, children }: AppNavRailProps) {
+export function AppNavRail({ items, children, logoHref }: AppNavRailProps) {
+  const logo = (
+    <span className="text-lg font-semibold text-nav-text">AgTerra Intelligence</span>
+  );
+
   return (
     <nav className="flex w-[220px] shrink-0 flex-col bg-nav-bg px-lg py-xl">
-      <div className="mb-2xl text-lg font-semibold text-nav-text">AgTerra Intelligence</div>
+      <div className="mb-2xl">
+        {logoHref ? (
+          <a href={logoHref} className="rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nav-text">
+            {logo}
+          </a>
+        ) : (
+          logo
+        )}
+      </div>
       <ul className="flex flex-col gap-xs">
         {items.map((item) => (
           <li key={item.label}>

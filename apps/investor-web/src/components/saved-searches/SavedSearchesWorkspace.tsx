@@ -110,6 +110,9 @@ function SavedSearchRow({
   });
 
   const viewResultsHref = `/?${buildQueryString(search.criteria)}`;
+  const editHref = `/?${buildQueryString(search.criteria)}&editSavedSearchId=${encodeURIComponent(
+    search.id,
+  )}&editSavedSearchName=${encodeURIComponent(search.name)}`;
 
   return (
     <div className="rounded border border-border-subtle bg-surface p-lg">
@@ -177,6 +180,12 @@ function SavedSearchRow({
             className="rounded bg-action-primary px-md py-sm text-sm font-semibold text-white hover:opacity-90"
           >
             View results
+          </Link>
+          <Link
+            href={editHref}
+            className="rounded border border-border-default px-md py-sm text-sm font-semibold text-text-secondary hover:bg-workspace-bg"
+          >
+            Edit filters
           </Link>
           <button
             type="button"

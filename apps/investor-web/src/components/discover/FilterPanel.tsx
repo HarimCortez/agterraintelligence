@@ -16,11 +16,22 @@ import {
 import { useAuthStore } from "@/lib/auth-store";
 import { useHandleUnauthorized } from "@/lib/use-handle-unauthorized";
 import { ForbiddenError } from "@/lib/api-errors";
-import { createSavedSearch } from "@/lib/saved-searches-api";
+import { createSavedSearch, updateSavedSearch, savedSearchesQueryKey } from "@/lib/saved-searches-api";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface FilterPanelProps {
   value: PropertyFilters;
   onApply: (next: PropertyFilters) => void;
+  /**
+   * Present when this Discover visit came from "Edit filters" on
+   * `/saved-searches` (see `SavedSearchesWorkspace`'s `editHref`) — swaps
+   * the "Save this search" footer for an "Update saved search" one that
+   * PATCHes the existing saved search's criteria instead of creating a new
+   * one, closing the previously-missing edit path (saved searches could
+   * only be renamed/deleted/recreated before this).
+   */
+  editSavedSearchId?: string;
+  editSavedSearchName?: string;
 }
 
 interface DraftState {
@@ -91,7 +102,7 @@ const checkboxRowClass = "flex items-center gap-xs text-sm text-text-primary";
  * one exception — it's a single discrete selection, not a value a user is
  * mid-composing, so it applies immediately on change.
  */
-export function FilterPanel({ value, onApply }: FilterPanelProps) {
+export function FilterPanel({ value, onApply, editSavedSearchId, editSavedSearchName }: FilterPanelProps) {
   const [draft, setDraft] = useState<DraftState>(() => filtersToDraft(value));
   const [isSavingSearch, setIsSavingSearch] = useState(false);
   const [savedSearchName, setSavedSearchName] = useState("");
@@ -99,6 +110,7 @@ export function FilterPanel({ value, onApply }: FilterPanelProps) {
 
   const user = useAuthStore((state) => state.user);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const handleUnauthorized = useHandleUnauthorized();
 
   const saveSearchMutation = useMutation({
@@ -111,6 +123,28 @@ export function FilterPanel({ value, onApply }: FilterPanelProps) {
     },
     onError: (error) => handleUnauthorized(error),
   });
+
+  const updateSearchMutation = useMutation({
+    mutationFn: (criteria: PropertyFilters) => updateSavedSearch(editSavedSearchId!, { criteria }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: savedSearchesQueryKey });
+      router.push("/saved-searches");
+    },
+    onError: (error) => handleUnauthorized(error),
+  });
+
+  // "Update saved search" applies the current draft itself rather than
+  // requiring a separate "Apply Filters" click first — the footer copy
+  // ("Adjust filters above, then update") promises a two-step flow, so the
+  // PATCH must use freshly-computed filters from `draft`, not the possibly-
+  // stale applied `value` (a bug caught in code review: clicking Update
+  // without an intervening Apply previously PATCHed the *old* criteria,
+  // silently discarding the user's edit).
+  const handleUpdateSearch = () => {
+    const next = draftToFilters(draft, value.sort ?? "score_desc");
+    onApply(next);
+    updateSearchMutation.mutate(next);
+  };
 
   const handleSaveSearchClick = () => {
     if (!user) {
@@ -314,7 +348,39 @@ export function FilterPanel({ value, onApply }: FilterPanelProps) {
           "graceful, not broken" pattern as `WatchToggle`) rather than
           firing a request that would 401. */}
       <div className="mt-lg border-t border-border-subtle pt-lg">
-        {isSavingSearch ? (
+        {editSavedSearchId ? (
+          <div className="flex flex-col gap-sm">
+            <p className="text-sm text-text-secondary">
+              Editing{" "}
+              <span className="font-semibold text-text-primary">{editSavedSearchName ?? "this search"}</span>. Adjust
+              filters above, then update.
+            </p>
+            {updateSearchMutation.isError && (
+              <p role="alert" className="text-xs text-text-secondary">
+                {updateSearchMutation.error instanceof Error
+                  ? updateSearchMutation.error.message
+                  : "Couldn't update this saved search. Please try again."}
+              </p>
+            )}
+            <div className="flex gap-sm">
+              <button
+                type="button"
+                onClick={handleUpdateSearch}
+                disabled={updateSearchMutation.isPending}
+                className="flex-1 rounded bg-action-primary px-md py-sm text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {updateSearchMutation.isPending ? "Updating…" : "Update saved search"}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/saved-searches")}
+                className="rounded border border-border-default px-md py-sm text-sm font-semibold text-text-secondary hover:bg-workspace-bg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : isSavingSearch ? (
           <form
             onSubmit={(e) => {
               e.preventDefault();

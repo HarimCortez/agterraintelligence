@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppNavRail } from "@agterra/ui";
 import { useComparisonStore } from "@/lib/comparison-store";
@@ -34,16 +35,26 @@ export function AppShell({ children }: { children: ReactNode }) {
     void useAuthStore.persist.rehydrate();
   }, []);
 
-  // Only "Discover" is a plain `AppNavRail` `items` entry — every other
-  // route (`/compare`, `/watchlist`, `/saved-searches`) needs a real link,
-  // which `items` (label + active flag only, no href) can't express, so
-  // those are rendered as `children` instead: `ComparisonTrayIndicator` and
-  // `AuthenticatedNavLinks` below.
-  const items = [{ label: "Discover", active: pathname === "/" }];
+  // `AppNavRail`'s `items` (label + active flag only, no href) can't express
+  // a real link, so every nav-rail entry — including "Discover" — is
+  // rendered as a `children` link instead, matching `AuthenticatedNavLinks`'
+  // established pattern. This also fixes a real dead end: previously
+  // "Discover" was inert text, leaving no nav-rail way back to it from
+  // `/compare`, `/watchlist`, `/account`, or `/support` (see the customer-
+  // journey UX audit's finding #1).
+  const isDiscoverActive = pathname === "/";
 
   return (
     <div className="flex min-h-screen bg-workspace-bg">
-      <AppNavRail items={items}>
+      <AppNavRail items={[]} logoHref="/">
+        <Link
+          href="/"
+          className={`flex items-center rounded px-sm py-sm text-sm transition-colors hover:bg-white/10 ${
+            isDiscoverActive ? "font-semibold text-nav-text" : "text-nav-text-muted"
+          }`}
+        >
+          Discover
+        </Link>
         <AuthenticatedNavLinks />
         <ComparisonTrayIndicator />
         <AuthNavSection />

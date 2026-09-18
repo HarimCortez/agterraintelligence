@@ -22,9 +22,15 @@ const PropertyMap = dynamic(() => import("./PropertyMap").then((m) => m.Property
 
 interface DiscoverWorkspaceProps {
   initialFilters: PropertyFilters;
+  editSavedSearchId?: string;
+  editSavedSearchName?: string;
 }
 
-export function DiscoverWorkspace({ initialFilters }: DiscoverWorkspaceProps) {
+export function DiscoverWorkspace({
+  initialFilters,
+  editSavedSearchId,
+  editSavedSearchName,
+}: DiscoverWorkspaceProps) {
   const [filters, setFilters] = useState<PropertyFilters>(initialFilters);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -47,7 +53,12 @@ export function DiscoverWorkspace({ initialFilters }: DiscoverWorkspaceProps) {
       </header>
 
       <div className="flex gap-xl">
-        <FilterPanel value={filters} onApply={setFilters} />
+        <FilterPanel
+          value={filters}
+          onApply={setFilters}
+          editSavedSearchId={editSavedSearchId}
+          editSavedSearchName={editSavedSearchName}
+        />
 
         <div className="grid flex-1 grid-cols-1 gap-lg xl:grid-cols-2">
           <section aria-label="Property results list" className="min-h-[500px]">
