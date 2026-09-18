@@ -1,12 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
-import { Prisma, ReportPriceBasis } from "@agterra/db";
+import { Prisma, ReportOrder, ReportPriceBasis, ReportTier, Subscription } from "@agterra/db";
 import { PrismaService } from "../common/prisma/prisma.service";
 import { AccountContext } from "../common/account-context/account-context";
 import { PropertiesService } from "../properties/properties.service";
 import { StripeClientService } from "./stripe-client.service";
 import { ReportTierCode } from "./dto/checkout-report.dto";
-import { ReportCheckoutResponseDto, ReportOrderDto } from "./dto/monetization-response.dto";
-import { REPORT_CHECKOUT_CANCEL_URL, REPORT_CHECKOUT_SUCCESS_URL } from "./checkout-urls";
+import { ReportCheckoutResponseDto, ReportOrderDto, ReportPricingDto } from "./dto/monetization-response.dto";
+import { buildReportCheckoutCancelUrl, buildReportCheckoutSuccessUrl } from "./checkout-urls";
 
 @Injectable()
 export class ReportOrdersService {
@@ -55,56 +55,38 @@ export class ReportOrdersService {
       throw new BadRequestException("Premium reports are not yet available for purchase");
     }
 
-    // 3 & 4. Subscription status for pricing, and this user's own delivered
-    // orders for this property for upgrade-credit / already-owns checks.
-    // Both queries are scoped directly by `ctx.scopeId` in the `where`
-    // clause itself — never "fetch then filter in JS" — matching the
-    // corrected `saved-searches.service.ts` ownership pattern.
-    const [subscription, deliveredOrders, allTiers] = await Promise.all([
-      this.prisma.subscription.findUnique({ where: { userId: ctx.scopeId } }),
-      this.prisma.reportOrder.findMany({
-        where: { propertyId, userId: ctx.scopeId, status: "delivered" },
-      }),
-      this.prisma.reportTier.findMany(),
-    ]);
-
+    // 3. Reject if the user already owns this tier or higher as a delivered
+    // order for this property. This ownership check reuses the same
+    // `deliveredOrders`/`allTiers` fetched below for pricing (single query
+    // each, not a second redundant round-trip) — it only considers *lower*
+    // delivered tiers as an error condition here; `computeTierPricingFromData`
+    // never flags "already own this exact tier or higher" itself, since the
+    // preview endpoint must never throw for an already-owned tier (it just
+    // previews price).
+    const pricingInputs = await this.fetchPricingInputs(ctx, propertyId);
+    const { deliveredOrders, allTiers } = pricingInputs;
     const tierByCode = new Map(allTiers.map((t) => [t.code, t]));
-    const requestedSortOrder = requestedTier.sortOrder;
-
-    let creditSourceOrder: (typeof deliveredOrders)[number] | undefined;
     for (const order of deliveredOrders) {
       const orderTier = tierByCode.get(order.reportTierCode);
-      if (!orderTier) continue; // defensive: a tier row was removed after the order was placed.
-
-      if (orderTier.sortOrder >= requestedSortOrder) {
+      if (orderTier && orderTier.sortOrder >= requestedTier.sortOrder) {
         throw new ConflictException("You already have this report tier or higher for this property");
-      }
-
-      const currentCreditSortOrder = creditSourceOrder
-        ? tierByCode.get(creditSourceOrder.reportTierCode)?.sortOrder ?? -1
-        : -1;
-      if (orderTier.sortOrder > currentCreditSortOrder) {
-        creditSourceOrder = order;
       }
     }
 
-    const isActiveSubscriber = subscription?.status === "active";
-    const basePriceCents = isActiveSubscriber
-      ? requestedTier.subscriberPriceCents
-      : requestedTier.nonSubscriberPriceCents;
-    const priceBasis: ReportPriceBasis = isActiveSubscriber
-      ? ReportPriceBasis.subscriber
-      : ReportPriceBasis.non_subscriber;
-
-    // Upgrade-credit rule (ARCHITECTURE.md Implementation Constraint #4):
-    // computed against the price the user actually paid for the lower
-    // tier, never against that tier's list price. Floored at 0 — never
-    // negative — on both the credit itself (never more than the new
-    // tier's price) and the resulting final price.
-    const upgradeCreditAppliedCents = creditSourceOrder
-      ? Math.min(creditSourceOrder.pricePaidCents, basePriceCents)
-      : 0;
-    const finalPriceCents = Math.max(basePriceCents - upgradeCreditAppliedCents, 0);
+    // 4. Shared subscriber/credit pricing formula — the exact same formula
+    // backs `GET /v1/properties/:id/reports/pricing`, per the architecture
+    // doc's "single source of truth" constraint (FR4). Computed from the
+    // `pricingInputs` already fetched above rather than re-querying.
+    const pricingByTier = this.computeTierPricingFromData(pricingInputs);
+    const pricing = pricingByTier.find((p) => p.tierCode === tier);
+    if (!pricing) {
+      // Defensive: requestedTier existed moments ago in step 2; a row
+      // removed out from under an in-flight request would land here.
+      throw new BadRequestException(`Unknown report tier: ${tier}`);
+    }
+    const finalPriceCents = pricing.netPriceCents;
+    const priceBasis = pricing.priceBasis as ReportPriceBasis;
+    const upgradeCreditAppliedCents = pricing.upgradeCreditAppliedCents;
 
     // 5. Fail clean with 503 before creating anything if Stripe isn't
     // configured — no Stripe account/keys are provisioned yet.
@@ -137,8 +119,8 @@ export class ReportOrdersService {
           quantity: 1,
         },
       ],
-      success_url: REPORT_CHECKOUT_SUCCESS_URL,
-      cancel_url: REPORT_CHECKOUT_CANCEL_URL,
+      success_url: buildReportCheckoutSuccessUrl(order.id),
+      cancel_url: buildReportCheckoutCancelUrl(propertyId),
       customer_email: userEmail,
       metadata: { reportOrderId: order.id },
       // Managed Payments (enabled by default on this Stripe account) requires
@@ -183,6 +165,104 @@ export class ReportOrdersService {
   }
 
   /**
+   * GET /v1/properties/:id/reports/pricing. Read-only preview across all
+   * four seeded tiers, backed by the exact same formula `createCheckout`
+   * uses (`computeTierPricing`) — no write, no Stripe call.
+   */
+  async previewPricing(ctx: AccountContext, propertyId: string): Promise<ReportPricingDto[]> {
+    await this.propertiesService.getPropertyById(propertyId);
+    const pricingInputs = await this.fetchPricingInputs(ctx, propertyId);
+    return this.computeTierPricingFromData(pricingInputs);
+  }
+
+  /**
+   * Fetches the raw data the pricing formula (and `createCheckout`'s
+   * ownership check) is computed from. Split out from
+   * `computeTierPricingFromData` purely to avoid the redundant double fetch
+   * that previously existed: `createCheckout` needs `deliveredOrders`/
+   * `allTiers` for its own "already owns this tier or higher" 409 check
+   * *and* for pricing, so it fetches once here and reuses the same result
+   * for both, rather than querying twice. `previewPricing` has no other
+   * caller to share a fetch with, so it just calls this and the formula
+   * back to back.
+   */
+  private async fetchPricingInputs(ctx: AccountContext, propertyId: string): Promise<PricingInputs> {
+    const [subscription, deliveredOrders, allTiers] = await Promise.all([
+      this.prisma.subscription.findUnique({ where: { userId: ctx.scopeId } }),
+      this.prisma.reportOrder.findMany({
+        where: { propertyId, userId: ctx.scopeId, status: "delivered" },
+      }),
+      this.prisma.reportTier.findMany({ orderBy: { sortOrder: "asc" } }),
+    ]);
+
+    return { subscription, deliveredOrders, allTiers };
+  }
+
+  /**
+   * Shared subscriber/credit pricing formula, generalized across all
+   * seeded `ReportTier` rows (ordered by `sortOrder`). This is the single
+   * source of truth `createCheckout` and `previewPricing` both call — the
+   * architecture doc's explicit "do not implement the formula twice"
+   * constraint (backs requirements FR4: the frontend must never
+   * independently recompute or estimate this value). Pure/synchronous —
+   * takes already-fetched data (see `fetchPricingInputs`) rather than
+   * querying itself, so callers control how many times the underlying
+   * queries actually run.
+   *
+   * Only *lower* delivered tiers contribute upgrade credit for a given
+   * tier — this method never throws for an already-owned tier or higher;
+   * that's a separate ownership check `createCheckout` makes on its own,
+   * since a pricing preview must never error just because a tier is
+   * already owned.
+   */
+  private computeTierPricingFromData({ subscription, deliveredOrders, allTiers }: PricingInputs): ReportPricingDto[] {
+    const tierByCode = new Map(allTiers.map((t) => [t.code, t]));
+    const isActiveSubscriber = subscription?.status === "active";
+
+    return allTiers.map((tier) => {
+      // Highest-sort-order delivered order strictly below this tier, if any.
+      let creditSourceOrder: (typeof deliveredOrders)[number] | undefined;
+      for (const order of deliveredOrders) {
+        const orderTier = tierByCode.get(order.reportTierCode);
+        if (!orderTier) continue; // defensive: tier row removed after the order was placed.
+        if (orderTier.sortOrder >= tier.sortOrder) continue; // only lower tiers contribute credit.
+
+        const currentCreditSortOrder = creditSourceOrder
+          ? tierByCode.get(creditSourceOrder.reportTierCode)?.sortOrder ?? -1
+          : -1;
+        if (orderTier.sortOrder > currentCreditSortOrder) {
+          creditSourceOrder = order;
+        }
+      }
+
+      const priceCents = isActiveSubscriber ? tier.subscriberPriceCents : tier.nonSubscriberPriceCents;
+      const priceBasis: ReportPriceBasis = isActiveSubscriber
+        ? ReportPriceBasis.subscriber
+        : ReportPriceBasis.non_subscriber;
+
+      // Upgrade-credit rule (ARCHITECTURE.md Implementation Constraint #4):
+      // computed against the price the user actually paid for the lower
+      // tier, never against that tier's list price. Floored at 0 — never
+      // negative — on both the credit itself (never more than the new
+      // tier's price) and the resulting final price.
+      const upgradeCreditAppliedCents = creditSourceOrder
+        ? Math.min(creditSourceOrder.pricePaidCents, priceCents)
+        : 0;
+      const netPriceCents = Math.max(priceCents - upgradeCreditAppliedCents, 0);
+
+      return {
+        tierCode: tier.code,
+        displayName: tier.displayName,
+        purchasable: !tier.requiresHumanReview,
+        priceCents,
+        priceBasis,
+        upgradeCreditAppliedCents,
+        netPriceCents,
+      };
+    });
+  }
+
+  /**
    * GET /v1/report-orders/:id. Ownership check is baked into the query
    * itself (`findFirst` with both `id` and `userId` in the same `where`),
    * not "fetch by id, then check ownership after" — the exact class of bug
@@ -200,6 +280,18 @@ export class ReportOrdersService {
 
     return toReportOrderDto(order);
   }
+}
+
+/**
+ * Raw inputs the pricing formula (`computeTierPricingFromData`) is derived
+ * from — fetched once via `fetchPricingInputs` and shared between
+ * `createCheckout`'s ownership check and its pricing computation, instead
+ * of each querying `reportOrder`/`reportTier` separately.
+ */
+interface PricingInputs {
+  subscription: Subscription | null;
+  deliveredOrders: ReportOrder[];
+  allTiers: ReportTier[];
 }
 
 interface ReportOrderRow {

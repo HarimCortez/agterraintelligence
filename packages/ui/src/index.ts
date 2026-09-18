@@ -17,4 +17,5 @@ export * from "./components/RiskFlagBadge";
 export * from "./components/DataConfidenceBadge";
 export * from "./components/AiAnalysisResult";
 export * from "./components/AppNavRail";
+export * from "./components/ReportTierCard";
 export * from "./icons";

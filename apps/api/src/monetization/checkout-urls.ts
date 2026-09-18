@@ -13,8 +13,23 @@ const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
 
 export const SUBSCRIPTION_CHECKOUT_SUCCESS_URL = `${FRONTEND_URL}/account?checkout=success`;
 export const SUBSCRIPTION_CHECKOUT_CANCEL_URL = `${FRONTEND_URL}/account?checkout=cancelled`;
-export const REPORT_CHECKOUT_SUCCESS_URL = `${FRONTEND_URL}/account?checkout=success`;
-export const REPORT_CHECKOUT_CANCEL_URL = `${FRONTEND_URL}/account?checkout=cancelled`;
+
+/**
+ * Report-purchase checkout redirects, built per-request rather than as
+ * static constants: the real `ReportOrder` id (and the `propertyId` the
+ * purchase was made from) are both already known server-side, synchronously,
+ * before the Stripe Checkout Session is created — see
+ * `ReportOrdersService.createCheckout`. Success routes straight to that
+ * order's workspace screen; cancel routes back to the tier-selection screen
+ * for the same property, not the generic `/account` page.
+ */
+export function buildReportCheckoutSuccessUrl(reportOrderId: string): string {
+  return `${FRONTEND_URL}/report-orders/${reportOrderId}?checkout=success`;
+}
+
+export function buildReportCheckoutCancelUrl(propertyId: string): string {
+  return `${FRONTEND_URL}/properties/${propertyId}/reports?checkout=cancelled`;
+}
 
 /** Where Stripe's hosted Billing Portal sends the user back after they're done. */
 export const BILLING_PORTAL_RETURN_URL = `${FRONTEND_URL}/account`;

@@ -47,6 +47,27 @@ export interface ReportCheckoutResponseDto {
   upgradeCreditAppliedCents: number;
 }
 
+/**
+ * GET /v1/properties/:id/reports/pricing — authenticated, per-investor
+ * pricing preview across all four seeded tiers. Deliberately omits an
+ * `alreadyOwned` field — `fe` derives that from the sibling
+ * `GET /v1/properties/:id/reports` response it already needs, to avoid a
+ * second, independently-computed source of the same fact.
+ */
+export interface ReportPricingDto {
+  tierCode: string;
+  displayName: string;
+  /** `false` for `premium` — mirrors `ReportTierDto.purchasable`. */
+  purchasable: boolean;
+  /** This investor's applicable base price (subscriber or non-subscriber). */
+  priceCents: number;
+  priceBasis: "subscriber" | "non_subscriber";
+  /** 0 if no lower delivered tier owned on this property. */
+  upgradeCreditAppliedCents: number;
+  /** max(priceCents - upgradeCreditAppliedCents, 0). */
+  netPriceCents: number;
+}
+
 /** GET /v1/properties/:id/reports and GET /v1/report-orders/:id. */
 export interface ReportOrderDto {
   id: string;

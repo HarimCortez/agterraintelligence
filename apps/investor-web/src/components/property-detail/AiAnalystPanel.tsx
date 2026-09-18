@@ -72,7 +72,11 @@ export function AiAnalystPanel({ propertyId }: AiAnalystPanelProps) {
   };
 
   return (
-    <section aria-label="AI Analyst" className="rounded border border-border-subtle bg-surface p-lg">
+    <section
+      id="ai-analyst"
+      aria-label="AI Analyst"
+      className="scroll-mt-xl rounded border border-border-subtle bg-surface p-lg"
+    >
       <div className="flex flex-wrap items-start justify-between gap-md">
         <div>
           <h2 className="text-lg font-semibold text-text-primary">AI Analyst</h2>

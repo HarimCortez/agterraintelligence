@@ -279,4 +279,144 @@ describe("ReportOrdersService — upgrade-credit / entitlement logic", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prismaMock.reportOrder.create).not.toHaveBeenCalled();
   });
+
+  it("fetches deliveredOrders/allTiers exactly once each — not once for the ownership check and again for pricing", async () => {
+    prismaMock.reportTier.findUnique.mockResolvedValue(TIERS.investor);
+    prismaMock.subscription.findUnique.mockResolvedValue(null);
+    // A distinct array instance per call would let a duplicate-fetch bug hide
+    // behind object identity; returning the same fixed value regardless of
+    // call count (as the mock always has) is exactly what let this bug land
+    // unnoticed, so this test's job is purely to assert *call count*, not
+    // return value shape.
+    prismaMock.reportOrder.findMany.mockResolvedValue([
+      makeDeliveredOrder({ reportTierCode: "essential", pricePaidCents: 7350 }),
+    ]);
+
+    await service.createCheckout(makeCtx(), PROPERTY_ID, "investor", "buyer@example.com");
+
+    // reportOrder.findMany: exactly one call for the delivered-orders fetch
+    // (used for both the 409 ownership check and the pricing formula).
+    expect(prismaMock.reportOrder.findMany).toHaveBeenCalledTimes(1);
+    // reportTier.findMany: exactly one call for the all-tiers fetch (also
+    // shared between the ownership check and pricing). reportTier.findUnique
+    // (the separate single-tier lookup in step 2) is unaffected and not
+    // counted here.
+    expect(prismaMock.reportTier.findMany).toHaveBeenCalledTimes(1);
+    // subscription.findUnique: exactly one call — only the pricing formula
+    // needs it, so this also confirms fetchPricingInputs itself only runs
+    // once per request.
+    expect(prismaMock.subscription.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  describe("checkout redirect URLs", () => {
+    it("builds success_url from the real created order id and cancel_url from propertyId (not the old static /account constants)", async () => {
+      prismaMock.reportTier.findUnique.mockResolvedValue(TIERS.essential);
+      prismaMock.subscription.findUnique.mockResolvedValue(null);
+      prismaMock.reportOrder.findMany.mockResolvedValue([]);
+      prismaMock.reportOrder.create.mockImplementation(({ data }: { data: Record<string, unknown> }) =>
+        Promise.resolve({ id: "created-order-id", ...data }),
+      );
+
+      await service.createCheckout(makeCtx(), PROPERTY_ID, "essential", "buyer@example.com");
+
+      expect(checkoutSessionsCreateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success_url: `http://localhost:3000/report-orders/created-order-id?checkout=success`,
+          cancel_url: `http://localhost:3000/properties/${PROPERTY_ID}/reports?checkout=cancelled`,
+        }),
+      );
+    });
+  });
+
+  describe("computeTierPricing (via previewPricing) — shared formula with createCheckout", () => {
+    it("no prior orders: returns base price only, zero credit, for every tier", async () => {
+      propertiesServiceMock.getPropertyById.mockResolvedValue({ id: PROPERTY_ID });
+      prismaMock.subscription.findUnique.mockResolvedValue(null);
+      prismaMock.reportOrder.findMany.mockResolvedValue([]);
+
+      const result = await service.previewPricing(makeCtx(), PROPERTY_ID);
+
+      expect(result).toHaveLength(4);
+      const essential = result.find((r) => r.tierCode === "essential")!;
+      expect(essential.priceCents).toBe(TIERS.essential.nonSubscriberPriceCents);
+      expect(essential.priceBasis).toBe("non_subscriber");
+      expect(essential.upgradeCreditAppliedCents).toBe(0);
+      expect(essential.netPriceCents).toBe(TIERS.essential.nonSubscriberPriceCents);
+    });
+
+    it("subscriber pricing: uses each tier's subscriberPriceCents", async () => {
+      prismaMock.subscription.findUnique.mockResolvedValue({ status: "active" });
+      prismaMock.reportOrder.findMany.mockResolvedValue([]);
+
+      const result = await service.previewPricing(makeCtx(), PROPERTY_ID);
+
+      const investor = result.find((r) => r.tierCode === "investor")!;
+      expect(investor.priceCents).toBe(TIERS.investor.subscriberPriceCents);
+      expect(investor.priceBasis).toBe("subscriber");
+    });
+
+    it("a prior lower delivered order applies credit (capped, net floored at 0) only to tiers above it", async () => {
+      prismaMock.subscription.findUnique.mockResolvedValue(null);
+      prismaMock.reportOrder.findMany.mockResolvedValue([
+        makeDeliveredOrder({ reportTierCode: "essential", pricePaidCents: 7350 }),
+      ]);
+
+      const result = await service.previewPricing(makeCtx(), PROPERTY_ID);
+
+      const essential = result.find((r) => r.tierCode === "essential")!;
+      // essential itself is not "lower than essential" -> no self-credit.
+      expect(essential.upgradeCreditAppliedCents).toBe(0);
+
+      const investor = result.find((r) => r.tierCode === "investor")!;
+      expect(investor.upgradeCreditAppliedCents).toBe(7350);
+      expect(investor.netPriceCents).toBe(TIERS.investor.nonSubscriberPriceCents - 7350);
+
+      const premium = result.find((r) => r.tierCode === "premium")!;
+      const expectedCredit = Math.min(7350, TIERS.premium.nonSubscriberPriceCents);
+      expect(premium.upgradeCreditAppliedCents).toBe(expectedCredit);
+      expect(premium.netPriceCents).toBeGreaterThanOrEqual(0);
+    });
+
+    it("floors net price at 0 when the prior payment exceeds the tier's price", async () => {
+      prismaMock.subscription.findUnique.mockResolvedValue({ status: "active" });
+      prismaMock.reportOrder.findMany.mockResolvedValue([
+        makeDeliveredOrder({ reportTierCode: "essential", pricePaidCents: 20000 }),
+      ]);
+
+      const result = await service.previewPricing(makeCtx(), PROPERTY_ID);
+
+      const investor = result.find((r) => r.tierCode === "investor")!;
+      expect(investor.netPriceCents).toBe(0);
+      expect(investor.upgradeCreditAppliedCents).toBe(TIERS.investor.subscriberPriceCents); // capped at own price
+    });
+
+    it("marks premium purchasable: false and every other tier purchasable: true, ordered by sortOrder", async () => {
+      prismaMock.subscription.findUnique.mockResolvedValue(null);
+      prismaMock.reportOrder.findMany.mockResolvedValue([]);
+
+      const result = await service.previewPricing(makeCtx(), PROPERTY_ID);
+
+      expect(result.map((r) => r.tierCode)).toEqual(["essential", "investor", "professional", "premium"]);
+      expect(result.find((r) => r.tierCode === "premium")!.purchasable).toBe(false);
+      expect(result.filter((r) => r.tierCode !== "premium").every((r) => r.purchasable)).toBe(true);
+    });
+
+    it("never throws for an already-owned tier — preview is read-only even when the investor already owns that tier or higher", async () => {
+      prismaMock.subscription.findUnique.mockResolvedValue(null);
+      prismaMock.reportOrder.findMany.mockResolvedValue([
+        makeDeliveredOrder({ reportTierCode: "professional", pricePaidCents: 37350 }),
+      ]);
+
+      const result = await service.previewPricing(makeCtx(), PROPERTY_ID);
+
+      expect(result).toHaveLength(4);
+      expect(prismaMock.reportOrder.create).not.toHaveBeenCalled();
+    });
+
+    it("propagates NotFoundException when the property doesn't exist, without querying pricing data", async () => {
+      propertiesServiceMock.getPropertyById.mockRejectedValue(new NotFoundException("not found"));
+
+      await expect(service.previewPricing(makeCtx(), PROPERTY_ID)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
 });

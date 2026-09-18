@@ -7,6 +7,7 @@ import { OpportunityScoreBadge, RiskFlagBadge, DataConfidenceBadge } from "@agte
 import { CompareToggle } from "@/components/CompareToggle";
 import { WatchToggle } from "@/components/WatchToggle";
 import { AiAnalystPanel } from "@/components/property-detail/AiAnalystPanel";
+import { PropertyReportCta } from "@/components/property-detail/PropertyReportCta";
 import { fetchPropertyById, propertyQueryKey, type PropertyDetail } from "@/lib/properties-api";
 import {
   formatCurrencyFromCents,
@@ -129,6 +130,8 @@ function PropertyDetailContent({ id, property }: { id: string; property: Propert
         <MetricCard label="Price / acre" value={formatCurrencyFromCents(property.pricePerAcreCents)} />
         <MetricCard label="Acreage" value={formatAcreage(property.acreage)} />
       </section>
+
+      <PropertyReportCta propertyId={id} />
 
       <section aria-label="Valuation" className="rounded border border-border-subtle bg-surface p-lg">
         <h2 className="mb-sm text-lg font-semibold text-text-primary">Valuation</h2>

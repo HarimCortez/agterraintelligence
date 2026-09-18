@@ -6,7 +6,7 @@ import { AccountContext } from "../common/account-context/account-context";
 import { AuthenticatedInvestorUser } from "../identity-access/investor/investor.types";
 import { ReportOrdersService } from "./report-orders.service";
 import { CheckoutReportDto } from "./dto/checkout-report.dto";
-import { ReportCheckoutResponseDto, ReportOrderDto } from "./dto/monetization-response.dto";
+import { ReportCheckoutResponseDto, ReportOrderDto, ReportPricingDto } from "./dto/monetization-response.dto";
 
 /**
  * Per-property report purchase/listing — `/v1/properties/:id/reports*`.
@@ -25,6 +25,14 @@ export class PropertyReportsController {
     @Param("id", new ParseUUIDPipe()) propertyId: string,
   ): Promise<ReportOrderDto[]> {
     return this.reportOrdersService.listForProperty(ctx, propertyId);
+  }
+
+  @Get("pricing")
+  previewPricing(
+    @CurrentAccountContext() ctx: AccountContext,
+    @Param("id", new ParseUUIDPipe()) propertyId: string,
+  ): Promise<ReportPricingDto[]> {
+    return this.reportOrdersService.previewPricing(ctx, propertyId);
   }
 
   @Post("checkout")
